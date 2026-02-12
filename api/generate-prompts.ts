@@ -3,7 +3,6 @@ import fetch from 'node-fetch';
 
 // Environment Configuration
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const ENGINE_SECRET = process.env.ENGINE_SECRET || 'dev-secret';
 
 // Background Style Options
 const BACKGROUND_STYLES = {
@@ -104,12 +103,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    // Auth check
-    const key = req.headers['x-engine-key'];
-    if (key !== ENGINE_SECRET) {
-        return res.status(403).json({ error: 'Unauthorized', message: 'Invalid engine key' });
-    }
-
     try {
         const { productName, category, problem, benefit } = req.body;
         
@@ -189,7 +182,7 @@ JSON ONLY, no markdown, no explanations.`
         console.error('[Gemini Error]', error);
         
         const { productName, category, problem, benefit } = req.body;
-        res.json({
+        return res.json({
             success: true,
             prompts: generateLocalPrompts(productName, category, problem, benefit),
             backgroundStyle: determineBackgroundStyle(category, productName),
