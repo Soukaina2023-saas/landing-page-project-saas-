@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { generatePromptsSchema } from "../lib/validation/generatePrompts.schema.js";
 import { checkRateLimit } from "../lib/utils/rateLimiter.js";
+import { ApiError, handleApiError } from "../lib/utils/apiError.js";
 
 // Environment Configuration
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -104,48 +105,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const ip =
-        (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
-        req.socket?.remoteAddress ||
-        "unknown";
-
-    const rate = checkRateLimit(ip);
-
-    if (!rate.allowed) {
-        return res.status(429).json({
-            success: false,
-            error: "Too many requests. Please try again later."
-        });
-    }
-
-    const parsed = generatePromptsSchema.safeParse(req.body);
-    
-    if (!parsed.success) {
-        return res.status(400).json({
-            success: false,
-            error: "Invalid request body",
-            details: parsed.error.flatten()
-        });
-    }
-
-    if (!process.env.GEMINI_API_KEY) {
-        return res.status(200).json({
-            success: true,
-            prompts: [
-                {
-                    image_role: "hero",
-                    prompt_text: "Mock professional product photography",
-                    aspect_ratio: "4:3"
-                }
-            ]
-        });
-    }
-
     try {
-        const { productName } = parsed.data;
-        const { category, problem, benefit } = req.body;
-        
-        const geminiResponse = await fetch(
+        const ip =
+            (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
+            req.socket?.remoteAddress ||
+            "unknown";
+
+        const rate = checkRateLimit(ip);
+
+        if (!rate.allowed) {
+            throw new ApiError(
+                429,
+                "RATE_LIMIT_EXCEEDED",
+                "Too many requests. Please try again later."
+            );
+        }
+
+        const parsed = generatePromptsSchema.safeParse(req.body);
+
+        if (!parsed.success) {
+            throw new ApiError(
+                400,
+                "VALIDATION_ERROR",
+                "Invalid request body"
+            );
+        }
+
+        if (!process.env.GEMINI_API_KEY) {
+            return res.status(200).json({
+                success: true,
+                prompts: [
+                    {
+                        image_role: "hero",
+                        prompt_text: "Mock professional product photography",
+                        aspect_ratio: "4:3"
+                    }
+                ]
+            });
+        }
+
+        try {
+            const { productName } = parsed.data;
+            const { category, problem, benefit } = req.body;
+
+            const geminiResponse = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
             {
                 method: 'POST',
@@ -173,48 +176,43 @@ JSON ONLY, no markdown, no explanations.`
                     }
                 })
             }
-        );
-        
-        if (!geminiResponse.ok) {
-            throw new Error(`Gemini API error: ${geminiResponse.status}`);
+            );
+
+            if (!geminiResponse.ok) {
+                throw new Error(`Gemini API error: ${geminiResponse.status}`);
+            }
+
+            const geminiData = await geminiResponse.json();
+            const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+
+            let geminiParsed;
+            try {
+                const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+                geminiParsed = JSON.parse(cleanText);
+            } catch (e) {
+                geminiParsed = {
+                    prompts: generateLocalPrompts(productName, category, problem, benefit),
+                    background_style: determineBackgroundStyle(category, productName)
+                };
+            }
+
+            const prompts = geminiParsed.prompts || generateLocalPrompts(productName, category, problem, benefit);
+            const backgroundStyle = geminiParsed.background_style || determineBackgroundStyle(category, productName);
+
+            res.json({
+                success: true,
+                prompts,
+                backgroundStyle,
+                source: 'gemini',
+                consistencyId: generateId()
+            });
+
+        } catch (error) {
+            const handled = handleApiError(error);
+            return res.status(handled.statusCode).json(handled.body);
         }
-        
-        const geminiData = await geminiResponse.json();
-        const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-        
-        let geminiParsed;
-        try {
-            const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-            geminiParsed = JSON.parse(cleanText);
-        } catch (e) {
-            geminiParsed = {
-                prompts: generateLocalPrompts(productName, category, problem, benefit),
-                background_style: determineBackgroundStyle(category, productName)
-            };
-        }
-        
-        const prompts = geminiParsed.prompts || generateLocalPrompts(productName, category, problem, benefit);
-        const backgroundStyle = geminiParsed.background_style || determineBackgroundStyle(category, productName);
-        
-        res.json({
-            success: true,
-            prompts,
-            backgroundStyle,
-            source: 'gemini',
-            consistencyId: generateId()
-        });
-        
-    } catch (error: any) {
-        console.error('[Gemini Error]', error);
-        
-        const { productName } = parsed.data;
-        const { category, problem, benefit } = req.body;
-        return res.json({
-            success: true,
-            prompts: generateLocalPrompts(productName, category, problem, benefit),
-            backgroundStyle: determineBackgroundStyle(category, productName),
-            source: 'fallback',
-            consistencyId: generateId()
-        });
+    } catch (error) {
+        const handled = handleApiError(error);
+        return res.status(handled.statusCode).json(handled.body);
     }
 }
