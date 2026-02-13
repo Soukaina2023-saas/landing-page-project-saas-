@@ -1,3 +1,5 @@
+import { logger } from "./logger.js";
+
 export type ErrorCode =
   | "VALIDATION_ERROR"
   | "RATE_LIMIT_EXCEEDED"
@@ -16,6 +18,13 @@ export class ApiError extends Error {
 
 export function handleApiError(error: unknown) {
   if (error instanceof ApiError) {
+    if (error.code === "VALIDATION_ERROR") {
+      logger.warn(error.message, { code: error.code, statusCode: error.statusCode });
+    } else if (error.code === "RATE_LIMIT_EXCEEDED") {
+      logger.warn(error.message, { code: error.code, statusCode: error.statusCode });
+    } else {
+      logger.error(error.message, { code: error.code, statusCode: error.statusCode });
+    }
     return {
       statusCode: error.statusCode,
       body: {
@@ -28,6 +37,7 @@ export function handleApiError(error: unknown) {
     };
   }
 
+  logger.error("Unhandled error", { error });
   return {
     statusCode: 500,
     body: {
