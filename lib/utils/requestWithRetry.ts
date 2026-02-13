@@ -27,7 +27,8 @@ export async function requestWithRetry<T>(
         logger.warn("Retry attempt", { attempt: attempt + 1, retries, error });
       } else {
         logger.error("All retries failed", { retries, error });
-        throw error;
+        const statusCode = (error as { statusCode?: number })?.statusCode ?? 500;
+        throw { code: "RETRY_FAILED", statusCode, originalError: error };
       }
     }
   }
