@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { generatePromptsSchema } from "../lib/validation/generatePrompts.schema.js";
+import { checkRateLimit } from "../lib/utils/rateLimiter.js";
 
 // Environment Configuration
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -101,6 +102,20 @@ function generateId() {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const ip =
+        (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
+        req.socket?.remoteAddress ||
+        "unknown";
+
+    const rate = checkRateLimit(ip);
+
+    if (!rate.allowed) {
+        return res.status(429).json({
+            success: false,
+            error: "Too many requests. Please try again later."
+        });
     }
 
     const parsed = generatePromptsSchema.safeParse(req.body);

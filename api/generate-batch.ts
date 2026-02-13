@@ -1,9 +1,24 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { generateBatchSchema } from "../lib/validation/generateBatch.schema.js";
+import { checkRateLimit } from "../lib/utils/rateLimiter.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const ip =
+    (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
+    req.socket?.remoteAddress ||
+    "unknown";
+
+  const rate = checkRateLimit(ip);
+
+  if (!rate.allowed) {
+    return res.status(429).json({
+      success: false,
+      error: "Too many requests. Please try again later."
+    });
   }
 
   const parsed = generateBatchSchema.safeParse(req.body);
