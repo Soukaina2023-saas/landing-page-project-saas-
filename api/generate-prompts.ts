@@ -113,22 +113,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
     }
 
+    if (!process.env.GEMINI_API_KEY) {
+        return res.status(200).json({
+            success: true,
+            prompts: [
+                {
+                    image_role: "hero",
+                    prompt_text: "Mock professional product photography",
+                    aspect_ratio: "4:3"
+                }
+            ]
+        });
+    }
+
     try {
         const { productName } = parsed.data;
         const { category, problem, benefit } = req.body;
-        
-        if (!GEMINI_API_KEY) {
-            const prompts = generateLocalPrompts(productName, category, problem, benefit);
-            const backgroundStyle = determineBackgroundStyle(category, productName);
-            
-            return res.json({
-                success: true,
-                prompts,
-                backgroundStyle,
-                source: 'local',
-                consistencyId: generateId()
-            });
-        }
         
         const geminiResponse = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
