@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { packageResultSchema } from "../lib/validation/packageResult.schema.js";
 
 function generateSingleFileHTML(html: string, images: unknown): string {
   return `<!DOCTYPE html>
@@ -22,7 +23,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { html, images, metadata } = req.body;
+    const parsed = packageResultSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid request body",
+        details: parsed.error.flatten()
+      });
+    }
+
+    const { html, css, assets } = parsed.data;
+    const images = (req.body as Record<string, unknown>)?.images;
+    const metadata = (req.body as Record<string, unknown>)?.metadata;
 
     const singleFile = generateSingleFileHTML(html, images);
 
