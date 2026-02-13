@@ -1,21 +1,25 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { generateBatchSchema } from "../lib/validation/generateBatch.schema.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const parsed = generateBatchSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid request body",
+      details: parsed.error.flatten(),
+      results: []
+    });
+  }
+
+  const { prompts } = parsed.data;
+
   try {
-    const { prompts } = req.body;
-
-    if (!Array.isArray(prompts)) {
-      return res.status(400).json({
-        success: false,
-        error: 'prompts array is required',
-        results: [],
-      });
-    }
-
     // MOCK image generation
     const results = prompts.map((prompt: any, index: number) => ({
       image_role: prompt.image_role || `image_${index}`,
