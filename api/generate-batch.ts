@@ -3,6 +3,7 @@ import { generateBatchSchema } from "../lib/validation/generateBatch.schema.js";
 import { checkRateLimit } from "../lib/utils/rateLimiter.js";
 import { ApiError, handleApiError } from "../lib/utils/apiError.js";
 import { logger } from "../lib/utils/logger.js";
+import { requestWithRetry } from "../lib/utils/requestWithRetry.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -40,6 +41,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const { prompts } = parsed.data;
+
+    await requestWithRetry(
+      async () => {
+        // Simulate unstable external API
+        if (Math.random() < 0.5) {
+          throw new Error("Simulated API failure");
+        }
+        return "ok";
+      },
+      {
+        retries: 2,
+        timeoutMs: 3000
+      }
+    );
 
     // MOCK image generation
     const results = prompts.map((prompt: any, index: number) => ({
