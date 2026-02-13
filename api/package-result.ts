@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { packageResultSchema } from "../lib/validation/packageResult.schema.js";
 import { checkRateLimit } from "../lib/utils/rateLimiter.js";
+import { ApiError, handleApiError } from "../lib/utils/apiError.js";
 
 function generateSingleFileHTML(html: string, images: unknown): string {
   return `<!DOCTYPE html>
@@ -23,29 +24,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const ip =
-    (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
-    req.socket?.remoteAddress ||
-    "unknown";
-
-  const rate = checkRateLimit(ip);
-
-  if (!rate.allowed) {
-    return res.status(429).json({
-      success: false,
-      error: "Too many requests. Please try again later."
-    });
-  }
-
   try {
+    const ip =
+      (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
+      req.socket?.remoteAddress ||
+      "unknown";
+
+    const rate = checkRateLimit(ip);
+
+    if (!rate.allowed) {
+      throw new ApiError(
+        429,
+        "RATE_LIMIT_EXCEEDED",
+        "Too many requests. Please try again later."
+      );
+    }
+
     const parsed = packageResultSchema.safeParse(req.body);
 
     if (!parsed.success) {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid request body",
-        details: parsed.error.flatten()
-      });
+      throw new ApiError(
+        400,
+        "VALIDATION_ERROR",
+        "Invalid request body"
+      );
     }
 
     const { html, css, assets } = parsed.data;
@@ -68,6 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, error: 'Internal server error' });
+    const handled = handleApiError(error);
+    return res.status(handled.statusCode).json(handled.body);
   }
 }
