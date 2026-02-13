@@ -7,8 +7,6 @@ import { logger } from "../lib/utils/logger.js";
 import { requestWithRetry } from "../lib/utils/requestWithRetry.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  throw new Error("Test internal crash");
-
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
