@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import fetch from 'node-fetch';
+import { generatePromptsSchema } from "@/lib/validation/generatePrompts.schema";
 
 // Environment Configuration
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -103,8 +104,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    const parsed = generatePromptsSchema.safeParse(req.body);
+    
+    if (!parsed.success) {
+        return res.status(400).json({
+            success: false,
+            error: "Invalid request body",
+            details: parsed.error.flatten()
+        });
+    }
+
     try {
-        const { productName, category, problem, benefit } = req.body;
+        const { productName } = parsed.data;
+        const { category, problem, benefit } = req.body;
         
         if (!GEMINI_API_KEY) {
             const prompts = generateLocalPrompts(productName, category, problem, benefit);
@@ -156,19 +168,19 @@ JSON ONLY, no markdown, no explanations.`
         const geminiData = await geminiResponse.json();
         const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
         
-        let parsed;
+        let geminiParsed;
         try {
             const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-            parsed = JSON.parse(cleanText);
+            geminiParsed = JSON.parse(cleanText);
         } catch (e) {
-            parsed = {
+            geminiParsed = {
                 prompts: generateLocalPrompts(productName, category, problem, benefit),
                 background_style: determineBackgroundStyle(category, productName)
             };
         }
         
-        const prompts = parsed.prompts || generateLocalPrompts(productName, category, problem, benefit);
-        const backgroundStyle = parsed.background_style || determineBackgroundStyle(category, productName);
+        const prompts = geminiParsed.prompts || generateLocalPrompts(productName, category, problem, benefit);
+        const backgroundStyle = geminiParsed.background_style || determineBackgroundStyle(category, productName);
         
         res.json({
             success: true,
@@ -181,7 +193,8 @@ JSON ONLY, no markdown, no explanations.`
     } catch (error: any) {
         console.error('[Gemini Error]', error);
         
-        const { productName, category, problem, benefit } = req.body;
+        const { productName } = parsed.data;
+        const { category, problem, benefit } = req.body;
         return res.json({
             success: true,
             prompts: generateLocalPrompts(productName, category, problem, benefit),
