@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { generatePromptsSchema } from "../lib/validation/generatePrompts.schema.js";
 import { checkRateLimit } from "../lib/utils/rateLimiter.js";
 import { ApiError, handleApiError } from "../lib/utils/apiError.js";
+import { logger } from "../lib/utils/logger.js";
 
 // Environment Configuration
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -111,9 +112,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             req.socket?.remoteAddress ||
             "unknown";
 
+        logger.info("Incoming request", { endpoint: req.url, method: req.method });
+
         const rate = checkRateLimit(ip);
 
         if (!rate.allowed) {
+            logger.warn("Rate limit exceeded", { ip });
             throw new ApiError(
                 429,
                 "RATE_LIMIT_EXCEEDED",
@@ -124,14 +128,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const parsed = generatePromptsSchema.safeParse(req.body);
 
         if (!parsed.success) {
+            logger.warn("Validation failed", { endpoint: req.url });
             throw new ApiError(
-                400,
-                "VALIDATION_ERROR",
-                "Invalid request body"
+            400,
+            "VALIDATION_ERROR",
+            "Invalid request body"
             );
         }
 
         if (!process.env.GEMINI_API_KEY) {
+            logger.info("Request successful", { endpoint: req.url });
             return res.status(200).json({
                 success: true,
                 prompts: [
@@ -199,6 +205,7 @@ JSON ONLY, no markdown, no explanations.`
             const prompts = geminiParsed.prompts || generateLocalPrompts(productName, category, problem, benefit);
             const backgroundStyle = geminiParsed.background_style || determineBackgroundStyle(category, productName);
 
+            logger.info("Request successful", { endpoint: req.url });
             res.json({
                 success: true,
                 prompts,
@@ -208,10 +215,12 @@ JSON ONLY, no markdown, no explanations.`
             });
 
         } catch (error) {
+            logger.error("Unhandled error", { error });
             const handled = handleApiError(error);
             return res.status(handled.statusCode).json(handled.body);
         }
     } catch (error) {
+        logger.error("Unhandled error", { error });
         const handled = handleApiError(error);
         return res.status(handled.statusCode).json(handled.body);
     }

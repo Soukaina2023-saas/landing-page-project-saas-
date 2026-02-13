@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { packageResultSchema } from "../lib/validation/packageResult.schema.js";
 import { checkRateLimit } from "../lib/utils/rateLimiter.js";
 import { ApiError, handleApiError } from "../lib/utils/apiError.js";
+import { logger } from "../lib/utils/logger.js";
 
 function generateSingleFileHTML(html: string, images: unknown): string {
   return `<!DOCTYPE html>
@@ -30,9 +31,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       req.socket?.remoteAddress ||
       "unknown";
 
+    logger.info("Incoming request", { endpoint: req.url, method: req.method });
+
     const rate = checkRateLimit(ip);
 
     if (!rate.allowed) {
+      logger.warn("Rate limit exceeded", { ip });
       throw new ApiError(
         429,
         "RATE_LIMIT_EXCEEDED",
@@ -43,6 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const parsed = packageResultSchema.safeParse(req.body);
 
     if (!parsed.success) {
+      logger.warn("Validation failed", { endpoint: req.url });
       throw new ApiError(
         400,
         "VALIDATION_ERROR",
@@ -56,6 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const singleFile = generateSingleFileHTML(html, images);
 
+    logger.info("Request successful", { endpoint: req.url });
     return res.json({
       success: true,
       package: {
@@ -70,6 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     });
   } catch (error) {
+    logger.error("Unhandled error", { error });
     const handled = handleApiError(error);
     return res.status(handled.statusCode).json(handled.body);
   }
