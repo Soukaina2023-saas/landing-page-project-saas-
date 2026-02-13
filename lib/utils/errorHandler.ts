@@ -38,23 +38,12 @@ export function handleError(error: any, res: any) {
   }
 
   if (error?.code === "RETRY_FAILED") {
-    if (error.statusCode === 429) {
-      logger.warn("Retry failed (rate limit)", { error });
-      res.status(429).json({
-        success: false,
-        error: {
-          code: "RATE_LIMIT_EXCEEDED",
-          message: "Too many requests. Please try again later."
-        }
-      });
-      return;
-    }
-    logger.error("Retry failed", { error });
+    logger.error(error?.message ?? "External service failed after retries", { error });
     res.status(500).json({
       success: false,
       error: {
-        code: "INTERNAL_ERROR",
-        message: "Something went wrong"
+        code: "RETRY_FAILED",
+        message: error?.message ?? "External service failed after retries"
       }
     });
     return;

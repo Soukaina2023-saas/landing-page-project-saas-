@@ -26,9 +26,11 @@ export async function requestWithRetry<T>(
       if (attempt < retries) {
         logger.warn("Retry attempt", { attempt: attempt + 1, retries, error });
       } else {
-        logger.error("All retries failed", { retries, error });
-        const statusCode = (error as { statusCode?: number })?.statusCode ?? 500;
-        throw { code: "RETRY_FAILED", statusCode, originalError: error };
+        throw {
+          statusCode: 500,
+          code: "RETRY_FAILED",
+          message: "External service failed after retries"
+        };
       }
     }
   }
