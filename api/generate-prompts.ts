@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import fetch from 'node-fetch';
-import { generatePromptsSchema } from "@/lib/validation/generatePrompts.schema";
+import { generatePromptsSchema } from "../lib/validation/generatePrompts.schema";
 
 // Environment Configuration
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
