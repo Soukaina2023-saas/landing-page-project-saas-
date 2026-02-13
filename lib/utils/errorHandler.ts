@@ -13,8 +13,20 @@ export function handleError(error: any, res: any) {
     return;
   }
 
-  if (error?.statusCode === 429) {
-    logger.warn("Too many requests", { error });
+  if (error?.code === "VALIDATION_ERROR") {
+    logger.warn(error?.message ?? "Invalid request body", { error });
+    res.status(400).json({
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: error?.message ?? "Invalid request body"
+      }
+    });
+    return;
+  }
+
+  if (error?.statusCode === 429 || error?.code === "RATE_LIMIT_EXCEEDED") {
+    logger.warn(error?.message ?? "Too many requests", { error });
     res.status(429).json({
       success: false,
       error: {

@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { generatePromptsSchema } from "../lib/validation/generatePrompts.schema.js";
 import { checkRateLimit } from "../lib/utils/rateLimiter.js";
-import { ApiError, handleApiError } from "../lib/utils/apiError.js";
+import { ApiError } from "../lib/utils/apiError.js";
+import { handleError } from "../lib/utils/errorHandler.js";
 import { logger } from "../lib/utils/logger.js";
 
 // Environment Configuration
@@ -215,13 +216,9 @@ JSON ONLY, no markdown, no explanations.`
             });
 
         } catch (error) {
-            logger.error("Unhandled error", { error });
-            const handled = handleApiError(error);
-            return res.status(handled.statusCode).json(handled.body);
+            return handleError(error, res);
         }
     } catch (error) {
-        logger.error("Unhandled error", { error });
-        const handled = handleApiError(error);
-        return res.status(handled.statusCode).json(handled.body);
+        return handleError(error, res);
     }
 }
