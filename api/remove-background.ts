@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { removeBackgroundSchema } from "../lib/validation/removeBackground.schema.js";
 import { checkRateLimit } from "../lib/utils/rateLimiter.js";
-import { ApiError, handleApiError } from "../lib/utils/apiError.js";
+import { ApiError } from "../lib/utils/apiError.js";
+import { handleError } from "../lib/utils/errorHandler.js";
 import { logger } from "../lib/utils/logger.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -51,8 +52,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       note: 'Background removal is in mock mode until Replicate API is configured.',
     });
   } catch (error) {
-    logger.error("Unhandled error", { error });
-    const handled = handleApiError(error);
-    return res.status(handled.statusCode).json(handled.body);
+    return handleError(error, res);
   }
 }

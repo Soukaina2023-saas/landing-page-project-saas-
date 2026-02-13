@@ -1,11 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { generateBatchSchema } from "../lib/validation/generateBatch.schema.js";
 import { checkRateLimit } from "../lib/utils/rateLimiter.js";
-import { ApiError, handleApiError } from "../lib/utils/apiError.js";
+import { ApiError } from "../lib/utils/apiError.js";
+import { handleError } from "../lib/utils/errorHandler.js";
 import { logger } from "../lib/utils/logger.js";
 import { requestWithRetry } from "../lib/utils/requestWithRetry.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  throw new Error("Test internal crash");
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -71,8 +74,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       note: 'Image generation is in mock mode until Replicate API is configured.',
     });
   } catch (error) {
-    logger.error("Unhandled error", { error });
-    const handled = handleApiError(error);
-    return res.status(handled.statusCode).json(handled.body);
+    return handleError(error, res);
   }
 }

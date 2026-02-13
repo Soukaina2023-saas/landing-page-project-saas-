@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { packageResultSchema } from "../lib/validation/packageResult.schema.js";
 import { checkRateLimit } from "../lib/utils/rateLimiter.js";
-import { ApiError, handleApiError } from "../lib/utils/apiError.js";
+import { ApiError } from "../lib/utils/apiError.js";
+import { handleError } from "../lib/utils/errorHandler.js";
 import { logger } from "../lib/utils/logger.js";
 
 function generateSingleFileHTML(html: string, images: unknown): string {
@@ -76,8 +77,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     });
   } catch (error) {
-    logger.error("Unhandled error", { error });
-    const handled = handleApiError(error);
-    return res.status(handled.statusCode).json(handled.body);
+    return handleError(error, res);
   }
 }
