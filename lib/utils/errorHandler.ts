@@ -25,6 +25,30 @@ export function handleError(error: any, res: any) {
     return;
   }
 
+  if (error?.code === "OPERATION_LIMIT_EXCEEDED") {
+    logger.warn(error?.message ?? "Operation limit exceeded", { error });
+    res.status(400).json({
+      success: false,
+      error: {
+        code: "OPERATION_LIMIT_EXCEEDED",
+        message: error?.message ?? "Operation limit exceeded"
+      }
+    });
+    return;
+  }
+
+  if (error?.code === "USAGE_LIMIT_EXCEEDED") {
+    logger.warn(error?.message ?? "Usage quota exceeded", { error });
+    res.status(429).json({
+      success: false,
+      error: {
+        code: "USAGE_LIMIT_EXCEEDED",
+        message: error?.message ?? "Usage quota exceeded"
+      }
+    });
+    return;
+  }
+
   if (error?.statusCode === 429 || error?.code === "RATE_LIMIT_EXCEEDED") {
     logger.warn(error?.message ?? "Too many requests", { error });
     res.status(429).json({

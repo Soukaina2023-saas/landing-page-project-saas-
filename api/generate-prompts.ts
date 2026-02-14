@@ -4,6 +4,12 @@ import { checkRateLimit } from "../lib/utils/rateLimiter.js";
 import { ApiError } from "../lib/utils/apiError.js";
 import { handleError } from "../lib/utils/errorHandler.js";
 import { logger } from "../lib/utils/logger.js";
+import {
+    checkOperationLimits,
+    checkUserQuota,
+    incrementUsage,
+    resolveUsageContext,
+} from "../usage/usage.service.js";
 
 // Environment Configuration
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -137,7 +143,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             );
         }
 
+        const requestedImages = (req.body as { imagesRequested?: number })?.imagesRequested ?? 1;
+        const usageContext = resolveUsageContext(req);
+        checkOperationLimits({ imagesRequested: requestedImages, batchSize: 1 });
+        checkUserQuota(usageContext, requestedImages);
+
         if (!process.env.GEMINI_API_KEY) {
+            incrementUsage(usageContext, requestedImages);
             logger.info("Request successful", { endpoint: req.url });
             return res.status(200).json({
                 success: true,
@@ -206,6 +218,7 @@ JSON ONLY, no markdown, no explanations.`
             const prompts = geminiParsed.prompts || generateLocalPrompts(productName, category, problem, benefit);
             const backgroundStyle = geminiParsed.background_style || determineBackgroundStyle(category, productName);
 
+            incrementUsage(usageContext, requestedImages);
             logger.info("Request successful", { endpoint: req.url });
             res.json({
                 success: true,
