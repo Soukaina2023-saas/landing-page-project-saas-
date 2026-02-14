@@ -2,7 +2,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { generateBatchSchema } from "../lib/validation/generateBatch.schema.js";
 import { checkRateLimit } from "../lib/utils/rateLimiter.js";
 import { ApiError } from "../lib/utils/apiError.js";
-import { handleError } from "../lib/utils/errorHandler.js";
 import { logger } from "../lib/utils/logger.js";
 import { requestWithRetry } from "../lib/utils/requestWithRetry.js";
 
@@ -71,7 +70,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       source: 'mock',
       note: 'Image generation is in mock mode until Replicate API is configured.',
     });
-  } catch (error) {
-    return handleError(error, res);
+  } catch (error: any) {
+    if (error?.code === "RETRY_FAILED") {
+      logger.error("Retry failed", { code: error.code });
+      return res.status(500).json({
+        success: false,
+        error: { code: "RETRY_FAILED", message: error.message },
+      });
+    }
+    if (error?.statusCode === 400) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: error.code ?? "VALIDATION_ERROR",
+          message: error.message ?? "Invalid request body",
+        },
+      });
+    }
+    if (error?.statusCode === 429) {
+      return res.status(429).json({
+        success: false,
+        error: {
+          code: error.code ?? "RATE_LIMIT_EXCEEDED",
+          message: error.message ?? "Too many requests. Please try again later.",
+        },
+      });
+    }
+    logger.error("Internal error", { error });
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR" },
+    });
   }
 }

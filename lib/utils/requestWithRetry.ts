@@ -1,5 +1,3 @@
-import { logger } from "./logger.js";
-
 export async function requestWithRetry<T>(
   requestFn: () => Promise<T>,
   options?: {
@@ -12,9 +10,25 @@ export async function requestWithRetry<T>(
 
   const withTimeout = (): Promise<T> => {
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("REQUEST_TIMEOUT")), timeoutMs);
+      setTimeout(
+        () =>
+          reject({
+            message: "REQUEST_TIMEOUT",
+          }),
+        timeoutMs
+      );
     });
     return Promise.race([requestFn(), timeoutPromise]);
+  };
+
+  const structuredThrow = (originalError: unknown) => {
+    throw {
+      code: "RETRY_FAILED",
+      statusCode: 500,
+      message: "External service failed after retries",
+      isOperational: true,
+      originalError,
+    };
   };
 
   let lastError: unknown;
@@ -23,17 +37,16 @@ export async function requestWithRetry<T>(
       return await withTimeout();
     } catch (error) {
       lastError = error;
-      if (attempt < retries) {
-        logger.warn("Retry attempt", { attempt: attempt + 1, retries, error });
-      } else {
-        throw {
-          statusCode: 500,
-          code: "RETRY_FAILED",
-          message: "External service failed after retries"
-        };
+      const statusCode = (error as any)?.statusCode;
+      if (statusCode === 400 || statusCode === 429) {
+        structuredThrow(lastError);
       }
+      if (attempt < retries) {
+        continue;
+      }
+      structuredThrow(lastError);
     }
   }
 
-  throw lastError;
+  structuredThrow(lastError);
 }
