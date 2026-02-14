@@ -4,7 +4,9 @@
   "description": "AI-powered landing page generator with real Image Generation API integration",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "deploy:prod": "npm test && vercel --prod"
   },
   "dependencies": {
     "@vercel/node": "^5.6.2",
@@ -15,8 +17,11 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "^20.10.6",
-    "typescript": "^5.3.3"
+    "@types/node": "^20.19.33",
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.2.2",
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.18"
   },
   "engines": {
     "node": ">=18.0.0"
