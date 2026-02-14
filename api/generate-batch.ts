@@ -4,6 +4,12 @@ import { checkRateLimit } from "../lib/utils/rateLimiter.js";
 import { ApiError } from "../lib/utils/apiError.js";
 import { logger } from "../lib/utils/logger.js";
 import { requestWithRetry } from "../lib/utils/requestWithRetry.js";
+import {
+  checkOperationLimits,
+  checkUserQuota,
+  incrementUsage,
+  resolveUsageContext,
+} from "../usage/usage.service.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -41,6 +47,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const { prompts } = parsed.data;
+    const input = { batchSize: (req.body as { batchSize?: number })?.batchSize ?? prompts.length };
+    const usageContext = resolveUsageContext(req);
+    checkOperationLimits({
+      imagesRequested: input.batchSize ?? 1,
+      batchSize: input.batchSize ?? 1,
+    });
+    checkUserQuota(usageContext, input.batchSize ?? 1);
 
     await requestWithRetry(
       async () => {
@@ -63,6 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       status: 'mock_generated',
     }));
 
+    incrementUsage(usageContext, input.batchSize ?? 1);
     logger.info("Request successful", { endpoint: req.url });
     return res.json({
       success: true,
