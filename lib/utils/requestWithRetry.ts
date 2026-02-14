@@ -21,7 +21,7 @@ export async function requestWithRetry<T>(
     return Promise.race([requestFn(), timeoutPromise]);
   };
 
-  const structuredThrow = (originalError: unknown) => {
+  const structuredThrow = (originalError: unknown): never => {
     throw {
       code: "RETRY_FAILED",
       statusCode: 500,
@@ -48,5 +48,5 @@ export async function requestWithRetry<T>(
     }
   }
 
-  structuredThrow(lastError);
+  return structuredThrow(lastError!);
 }
