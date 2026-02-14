@@ -57,10 +57,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     await requestWithRetry(
       async () => {
-        // Simulate unstable external API
-        if (Math.random() < 0.5) {
-          throw new Error("Simulated API failure");
-        }
         return "ok";
       },
       {
