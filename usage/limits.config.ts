@@ -2,7 +2,7 @@ export const MAX_IMAGES_PER_REQUEST = 4;
 export const MAX_BATCH_SIZE = 6;
 
 export const DEMO_LIMITS = {
-  maxRequests: 20,
+  maxRequests: 1,
   maxImages: 40,
 } as const;
 
