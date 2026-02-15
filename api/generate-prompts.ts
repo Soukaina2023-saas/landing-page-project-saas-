@@ -133,6 +133,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             );
         }
 
+        logger.info("generate-prompts body (pre-parse)", {
+            typeofReqBody: typeof req.body,
+            reqBody: req.body,
+        });
+
         let requestBody: unknown = req.body;
         if (typeof req.body === "string") {
             try {
@@ -146,6 +151,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             logger.warn("Validation failed", { endpoint: req.url });
             throw new ApiError(400, "VALIDATION_ERROR", "Invalid request body");
         }
+
+        logger.info("generate-prompts body (post-parse)", {
+            typeofRequestBody: typeof requestBody,
+            requestBodyKeys: Object.keys((requestBody as object) || {}),
+        });
 
         const parsed = generatePromptsSchema.safeParse(requestBody);
 
