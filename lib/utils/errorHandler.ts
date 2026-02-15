@@ -61,6 +61,18 @@ export function handleError(error: any, res: any) {
     return;
   }
 
+  if (error?.code === "FEATURE_DISABLED") {
+    logger.warn(error?.message ?? "Feature is temporarily unavailable", { error });
+    res.status(503).json({
+      success: false,
+      error: {
+        code: "FEATURE_DISABLED",
+        message: error?.message ?? "This feature is temporarily unavailable",
+      },
+    });
+    return;
+  }
+
   if (error?.code === "RETRY_FAILED") {
     logger.error(error?.message ?? "External service failed after retries", { error });
     res.status(500).json({

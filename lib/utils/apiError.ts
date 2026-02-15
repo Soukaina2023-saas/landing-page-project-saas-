@@ -3,6 +3,7 @@ export type ErrorCode =
   | "RATE_LIMIT_EXCEEDED"
   | "OPERATION_LIMIT_EXCEEDED"
   | "USAGE_LIMIT_EXCEEDED"
+  | "FEATURE_DISABLED"
   | "INTERNAL_ERROR";
 
 export class ApiError extends Error {

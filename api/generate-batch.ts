@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { FEATURE_FLAGS } from "../src/config/featureFlags.js";
 import { generateBatchSchema } from "../lib/validation/generateBatch.schema.js";
 import { checkRateLimit } from "../lib/utils/rateLimiter.js";
 import { ApiError } from "../lib/utils/apiError.js";
@@ -48,12 +49,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const { prompts } = parsed.data;
     const input = { batchSize: (req.body as { batchSize?: number })?.batchSize ?? prompts.length };
+    // Usage layer first (never bypass): resolveContext → operation limits → user quota → then feature flags → then AI
     const usageContext = resolveUsageContext(req);
     checkOperationLimits({
       imagesRequested: input.batchSize ?? 1,
       batchSize: input.batchSize ?? 1,
     });
     checkUserQuota(usageContext, input.batchSize ?? 1);
+
+    if (!FEATURE_FLAGS.ENABLE_AI_GENERATION) {
+      throw new ApiError(
+        503,
+        "FEATURE_DISABLED",
+        "AI generation is temporarily unavailable"
+      );
+    }
 
     await requestWithRetry(
       async () => {
@@ -81,6 +91,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       note: 'Image generation is in mock mode until Replicate API is configured.',
     });
   } catch (error: any) {
+    if (error?.code === "FEATURE_DISABLED") {
+      return res.status(503).json({
+        success: false,
+        error: { code: error.code, message: error.message ?? "AI generation is temporarily unavailable" },
+      });
+    }
     if (error?.code === "RETRY_FAILED") {
       logger.error("Retry failed", { code: error.code });
       return res.status(500).json({

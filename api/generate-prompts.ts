@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { FEATURE_FLAGS } from "../src/config/featureFlags.js";
 import { generatePromptsSchema } from "../lib/validation/generatePrompts.schema.js";
 import { checkRateLimit } from "../lib/utils/rateLimiter.js";
 import { ApiError } from "../lib/utils/apiError.js";
@@ -132,7 +133,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             );
         }
 
-        const parsed = generatePromptsSchema.safeParse(req.body);
+        let requestBody: unknown = req.body;
+        if (typeof req.body === "string") {
+            try {
+                requestBody = JSON.parse(req.body);
+            } catch {
+                logger.warn("Invalid request body", { endpoint: req.url });
+                throw new ApiError(400, "VALIDATION_ERROR", "Invalid request body");
+            }
+        }
+        if (requestBody === null || typeof requestBody !== "object") {
+            logger.warn("Validation failed", { endpoint: req.url });
+            throw new ApiError(400, "VALIDATION_ERROR", "Invalid request body");
+        }
+
+        const parsed = generatePromptsSchema.safeParse(requestBody);
 
         if (!parsed.success) {
             logger.warn("Validation failed", { endpoint: req.url });
@@ -143,10 +158,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             );
         }
 
-        const requestedImages = (req.body as { imagesRequested?: number })?.imagesRequested ?? 1;
+        const requestedImages = (requestBody as { imagesRequested?: number })?.imagesRequested ?? 1;
+        // Usage layer first (never bypass): resolveContext → operation limits → user quota → then feature flags → then AI
         const usageContext = resolveUsageContext(req);
         checkOperationLimits({ imagesRequested: requestedImages, batchSize: 1 });
         checkUserQuota(usageContext, requestedImages);
+
+        if (!FEATURE_FLAGS.ENABLE_PROMPT_ANALYSIS) {
+            throw new ApiError(
+                503,
+                "FEATURE_DISABLED",
+                "Prompt analysis is temporarily unavailable"
+            );
+        }
 
         if (!process.env.GEMINI_API_KEY) {
             incrementUsage(usageContext, requestedImages);
@@ -165,7 +189,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         try {
             const { productName } = parsed.data;
-            const { category, problem, benefit } = req.body;
+            const category = String((requestBody as Record<string, unknown>).category ?? "");
+            const problem = String((requestBody as Record<string, unknown>).problem ?? "");
+            const benefit = String((requestBody as Record<string, unknown>).benefit ?? "");
 
             const geminiResponse = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,

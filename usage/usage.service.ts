@@ -1,3 +1,4 @@
+import { isDemoMode } from "../src/config/runtime.js";
 import { ApiError } from "../lib/utils/apiError.js";
 import { getUsageRecord, setUsageRecord } from "./usage.store.js";
 import {
@@ -23,13 +24,21 @@ function getLimitsForPlan(plan: UsageContext["plan"]) {
 }
 
 export function resolveUsageContext(_req: { headers?: Record<string, string | string[] | undefined> }): UsageContext {
-  const userId = "mock-user";
-  const plan: UsageContext["plan"] = "demo";
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const periodKey = `${year}-${month}`;
-  return { userId, plan, periodKey };
+  if (isDemoMode) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const periodKey = `${year}-${month}`;
+    return { userId: "mock-user", plan: "demo", periodKey };
+  } else {
+    const userId = "mock-user";
+    const plan: UsageContext["plan"] = "basic";
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const periodKey = `${year}-${month}`;
+    return { userId, plan, periodKey };
+  }
 }
 
 export function checkOperationLimits(input: { imagesRequested?: number; batchSize?: number }): void {

@@ -9,6 +9,8 @@ vi.mock("../lib/utils/rateLimiter.js", () => ({
   checkRateLimit: vi.fn().mockReturnValue({ allowed: true }),
 }));
 
+vi.mock("../src/config/runtime.js", () => ({ isDemoMode: true }));
+
 vi.mock("../usage/limits.config.js", () => ({
   MAX_IMAGES_PER_REQUEST: 4,
   MAX_BATCH_SIZE: 6,

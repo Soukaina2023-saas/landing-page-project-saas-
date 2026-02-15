@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { FEATURE_FLAGS } from "../src/config/featureFlags.js";
 import { removeBackgroundSchema } from "../lib/validation/removeBackground.schema.js";
 import { checkRateLimit } from "../lib/utils/rateLimiter.js";
 import { ApiError } from "../lib/utils/apiError.js";
@@ -48,9 +49,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const { image_url, image_base64 } = parsed.data;
 
+    // Usage layer first (never bypass): resolveContext → operation limits → user quota → then feature flags → then AI
     const usageContext = resolveUsageContext(req);
     checkOperationLimits({ imagesRequested: 1, batchSize: 1 });
     checkUserQuota(usageContext, 1);
+
+    if (!FEATURE_FLAGS.ENABLE_BACKGROUND_REMOVAL) {
+      throw new ApiError(
+        503,
+        "FEATURE_DISABLED",
+        "Background removal is temporarily unavailable"
+      );
+    }
 
     // Mock behavior: return the same image without modification
     const processedImageUrl = image_url ?? (image_base64 ? "[base64 image provided]" : "");
