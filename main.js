@@ -3221,25 +3221,18 @@ function initEventListeners() {
     var themeToggleBtn = document.getElementById('themeToggleBtn');
     var themeDropdown = document.getElementById('themeDropdown');
     var themeDropdownTrigger = document.getElementById('themeDropdownTrigger');
-    var themeToggleLabel = document.getElementById('themeToggleLabel');
     var themeSelectorWrap = document.getElementById('themeSelectorWrap');
 
     function updateDarkLightToggle(isLight) {
-        if (!themeToggleBtn || !themeToggleLabel) return;
+        if (!themeToggleBtn) return;
         if (isLight) {
             themeToggleBtn.classList.add('theme-toggle-light');
             themeToggleBtn.classList.remove('theme-toggle-dark');
             themeToggleBtn.setAttribute('aria-label', 'Light Mode');
-            themeToggleLabel.textContent = 'Light Mode';
-            themeToggleBtn.querySelector('.theme-icon-moon').classList.add('hidden');
-            themeToggleBtn.querySelector('.theme-icon-sun').classList.remove('hidden');
         } else {
             themeToggleBtn.classList.add('theme-toggle-dark');
             themeToggleBtn.classList.remove('theme-toggle-light');
             themeToggleBtn.setAttribute('aria-label', 'Dark Mode');
-            themeToggleLabel.textContent = 'Dark Mode';
-            themeToggleBtn.querySelector('.theme-icon-moon').classList.remove('hidden');
-            themeToggleBtn.querySelector('.theme-icon-sun').classList.add('hidden');
         }
     }
 
@@ -3273,6 +3266,52 @@ function initEventListeners() {
                 themeDropdown.classList.toggle('hidden');
             });
         }
+
+        (function initThemeDockAnimation() {
+            var panel = document.getElementById('themeDropdown');
+            var items = panel ? panel.querySelectorAll('.theme-dock-item') : [];
+            var raf = null;
+            var lastMouseX = Infinity;
+
+            function updateScales(mouseX) {
+                if (!panel || panel.classList.contains('hidden')) return;
+                var rect = panel.getBoundingClientRect();
+                var panelWidth = rect.width;
+                if (panelWidth <= 0) return;
+                var halfPanel = panelWidth * 0.5;
+                items.forEach(function(item) {
+                    var r = item.getBoundingClientRect();
+                    var centerX = r.left + r.width * 0.5;
+                    var distance = mouseX - centerX;
+                    var normalized = (distance / halfPanel) * (Math.PI / 2);
+                    var factor = Math.pow(Math.cos(normalized), 12);
+                    if (factor < 0) factor = 0;
+                    var scale = 1 + 0.75 * factor;
+                    item.style.transform = 'scale(' + scale + ')';
+                });
+            }
+
+            function resetScales() {
+                items.forEach(function(item) {
+                    item.style.transform = 'scale(1)';
+                });
+            }
+
+            if (panel) {
+                panel.addEventListener('mousemove', function(e) {
+                    lastMouseX = e.clientX;
+                    if (raf) return;
+                    raf = requestAnimationFrame(function() {
+                        raf = null;
+                        updateScales(lastMouseX);
+                    });
+                });
+                panel.addEventListener('mouseleave', function() {
+                    lastMouseX = Infinity;
+                    resetScales();
+                });
+            }
+        })();
 
         document.querySelectorAll('.theme-dropdown-btn').forEach(function(btn) {
             btn.addEventListener('click', function(e) {
