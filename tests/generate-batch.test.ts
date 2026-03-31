@@ -5,6 +5,7 @@ import { requestWithRetry } from '../lib/utils/requestWithRetry.js';
 vi.mock('../lib/utils/requestWithRetry', () => ({
   requestWithRetry: vi.fn(),
 }));
+vi.mock('../src/config/runtime.js', () => ({ isDemoMode: true }));
 
 function createMockReq(body: object) {
   return {

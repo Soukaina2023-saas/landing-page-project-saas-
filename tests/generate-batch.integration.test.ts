@@ -48,8 +48,8 @@ function createMockRes() {
   };
 }
 
-function getUsageKey(): string {
-  const ctx = resolveUsageContext({});
+async function getUsageKey(): Promise<string> {
+  const ctx = await resolveUsageContext({});
   return `${ctx.userId}:${ctx.periodKey}`;
 }
 
@@ -69,7 +69,7 @@ describe("POST /api/generate-batch (integration)", () => {
       expect.objectContaining({ success: true, results: expect.any(Array) })
     );
 
-    const record = getUsageRecord(getUsageKey());
+    const record = getUsageRecord(await getUsageKey());
     expect(record).toBeDefined();
     expect(record!.requestCount).toBe(1);
     expect(record!.imageCount).toBe(validBody.prompts.length);
@@ -92,7 +92,7 @@ describe("POST /api/generate-batch (integration)", () => {
       })
     );
 
-    const record = getUsageRecord(getUsageKey());
+    const record = getUsageRecord(await getUsageKey());
     expect(record).toBeUndefined();
   });
 
@@ -118,7 +118,7 @@ describe("POST /api/generate-batch (integration)", () => {
       })
     );
 
-    const record = getUsageRecord(getUsageKey());
+    const record = getUsageRecord(await getUsageKey());
     expect(record).toBeDefined();
     expect(record!.requestCount).toBe(1);
     expect(record!.imageCount).toBe(validBody.prompts.length);

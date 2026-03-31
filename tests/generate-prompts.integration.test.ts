@@ -41,21 +41,28 @@ function createMockRes() {
   };
 }
 
-function getUsageKey(): string {
-  const ctx = resolveUsageContext({});
+async function getUsageKey(): Promise<string> {
+  const ctx = await resolveUsageContext({});
   return `${ctx.userId}:${ctx.periodKey}`;
 }
 
 describe("POST /api/generate-prompts (integration)", () => {
   const originalGeminiKey = process.env.GEMINI_API_KEY;
+  const originalForceExternalFailure = process.env.FORCE_EXTERNAL_FAILURE;
 
   beforeEach(() => {
     resetUsageStore();
     process.env.GEMINI_API_KEY = "";
+    delete process.env.FORCE_EXTERNAL_FAILURE;
   });
 
   afterEach(() => {
     process.env.GEMINI_API_KEY = originalGeminiKey;
+    if (originalForceExternalFailure === undefined) {
+      delete process.env.FORCE_EXTERNAL_FAILURE;
+    } else {
+      process.env.FORCE_EXTERNAL_FAILURE = originalForceExternalFailure;
+    }
   });
 
   it("valid request → 200 and usage incremented", async () => {
@@ -68,7 +75,7 @@ describe("POST /api/generate-prompts (integration)", () => {
       expect.objectContaining({ success: true, prompts: expect.any(Array) })
     );
 
-    const record = getUsageRecord(getUsageKey());
+    const record = getUsageRecord(await getUsageKey());
     expect(record).toBeDefined();
     expect(record!.requestCount).toBe(1);
     expect(record!.imageCount).toBe(1);
@@ -90,7 +97,7 @@ describe("POST /api/generate-prompts (integration)", () => {
       })
     );
 
-    const record = getUsageRecord(getUsageKey());
+    const record = getUsageRecord(await getUsageKey());
     expect(record).toBeUndefined();
   });
 
@@ -116,9 +123,29 @@ describe("POST /api/generate-prompts (integration)", () => {
       })
     );
 
-    const record = getUsageRecord(getUsageKey());
+    const record = getUsageRecord(await getUsageKey());
     expect(record).toBeDefined();
     expect(record!.requestCount).toBe(1);
     expect(record!.imageCount).toBe(1);
+  });
+
+  it("FORCE_EXTERNAL_FAILURE=true → 500 RETRY_FAILED and usage NOT incremented", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    process.env.FORCE_EXTERNAL_FAILURE = "true";
+
+    const req = createMockReq(validBody);
+    const res = createMockRes();
+    await handler(req as any, res as any);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: expect.objectContaining({ code: "RETRY_FAILED" }),
+      })
+    );
+
+    const record = getUsageRecord(await getUsageKey());
+    expect(record).toBeUndefined();
   });
 });

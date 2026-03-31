@@ -37,8 +37,8 @@ function createMockRes() {
   };
 }
 
-function getUsageKey(): string {
-  const ctx = resolveUsageContext({});
+async function getUsageKey(): Promise<string> {
+  const ctx = await resolveUsageContext({});
   return `${ctx.userId}:${ctx.periodKey}`;
 }
 
@@ -59,7 +59,7 @@ describe("POST /api/remove-background (integration)", () => {
       })
     );
 
-    const record = getUsageRecord(getUsageKey());
+    const record = getUsageRecord(await getUsageKey());
     expect(record).toBeDefined();
     expect(record!.requestCount).toBe(1);
     expect(record!.imageCount).toBe(1);
@@ -86,7 +86,7 @@ describe("POST /api/remove-background (integration)", () => {
       })
     );
 
-    const record = getUsageRecord(getUsageKey());
+    const record = getUsageRecord(await getUsageKey());
     expect(record).toBeDefined();
     expect(record!.requestCount).toBe(1);
     expect(record!.imageCount).toBe(1);

@@ -4,6 +4,7 @@ export type ErrorCode =
   | "OPERATION_LIMIT_EXCEEDED"
   | "USAGE_LIMIT_EXCEEDED"
   | "FEATURE_DISABLED"
+  | "RETRY_FAILED"
   | "INTERNAL_ERROR";
 
 export class ApiError extends Error {

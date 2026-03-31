@@ -1,6 +1,20 @@
 import { logger } from "./logger.js";
 
 export function handleError(error: any, res: any) {
+  if (error?.name === "InsufficientCreditsError") {
+    logger.warn(error?.message ?? "Insufficient credits", { error });
+    res.status(402).json({
+      success: false,
+      error: {
+        code: "INSUFFICIENT_CREDITS",
+        message: error?.message ?? "Insufficient credits for this operation",
+        currentBalance: error?.currentBalance,
+        required: error?.required,
+      },
+    });
+    return;
+  }
+
   if (error?.name === "ZodError") {
     logger.warn("Invalid request body", { error });
     res.status(400).json({

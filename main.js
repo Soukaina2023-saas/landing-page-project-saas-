@@ -41,7 +41,7 @@ const AppState = {
     // Premium power features (only when isPremium; basic tools never locked)
     premium: {
         inlineEdit: false,
-        sectionOrder: ['hero', 'problem', 'solution', 'howItWorks', 'beforeAfter', 'testimonials', 'expert', 'faq', 'cta', 'footer'],
+        sectionOrder: ['hero', 'problem', 'solution', 'lifestyle', 'howItWorks', 'beforeAfter', 'ingredients', 'testimonials', 'expert', 'faq', 'cta', 'footer'],
         columnLayout: '6-6',
         templateId: null,
         widgets: { countdown: false, whatsapp: false, videoPopup: false, testimonialsBlock: true },
@@ -283,8 +283,10 @@ const I18n = {
         sectionOrder_hero: 'هيرو',
         sectionOrder_problem: 'المشاكل',
         sectionOrder_solution: 'الحلول',
+        sectionOrder_lifestyle: 'التجربة',
         sectionOrder_howItWorks: 'كيف يعمل',
         sectionOrder_beforeAfter: 'قبل وبعد',
+        sectionOrder_ingredients: 'المكونات',
         sectionOrder_testimonials: 'آراء العملاء',
         sectionOrder_expert: 'توصية الخبير',
         sectionOrder_faq: 'الأسئلة الشائعة',
@@ -494,8 +496,10 @@ const I18n = {
         sectionOrder_hero: 'Hero',
         sectionOrder_problem: 'Problems',
         sectionOrder_solution: 'Solutions',
+        sectionOrder_lifestyle: 'Experience',
         sectionOrder_howItWorks: 'How it works',
         sectionOrder_beforeAfter: 'Before & After',
+        sectionOrder_ingredients: 'Ingredients',
         sectionOrder_testimonials: 'Testimonials',
         sectionOrder_expert: 'Expert',
         sectionOrder_faq: 'FAQ',
@@ -671,8 +675,10 @@ const I18n = {
         sectionOrder_hero: 'Hero',
         sectionOrder_problem: 'Problèmes',
         sectionOrder_solution: 'Solutions',
+        sectionOrder_lifestyle: 'Expérience',
         sectionOrder_howItWorks: 'Comment ça marche',
         sectionOrder_beforeAfter: 'Avant / Après',
+        sectionOrder_ingredients: 'Ingrédients',
         sectionOrder_testimonials: 'Témoignages',
         sectionOrder_expert: 'Expert',
         sectionOrder_faq: 'FAQ',
@@ -1550,7 +1556,7 @@ function initPremiumSection() {
             tools.classList.add('hidden');
         }
     }
-    if (!AppState.isPremium) return;
+    /* خيار تعديل النص مباشرة: متاح لجميع المستخدمين (حاسوب + موبايل) */
     var inlineCheck = document.getElementById('enableInlineEdit');
     if (inlineCheck) {
         inlineCheck.checked = AppState.premium.inlineEdit;
@@ -1559,6 +1565,7 @@ function initPremiumSection() {
             applyInlineEditingToPreview();
         });
     }
+    if (!AppState.isPremium) return;
     document.querySelectorAll('.template-opt').forEach(btn => {
         var isSelected = (btn.dataset.template || '') === (AppState.premium.templateId || '');
         btn.classList.toggle('border-purple-500/50', isSelected);
@@ -1626,7 +1633,7 @@ function applyInlineEditingToPreview() {
             : (container.querySelector('.lp-preview-scope') || container.querySelector('body') || container);
         if (!scope) return;
 
-        var editableSelector = 'h1, h2, h3, h4, p, a, .logo, .hero-badge, .section-label, .hero-trust-item, .hero-badge-item, .float-item span, .float-item div, .price-guarantee span, .price-guarantee-item, .footer-trust-item, .footer-trust-item span, .hero-benefits li span, .price-original, .price-discount, .urgency-text, .cta-guarantee';
+        var editableSelector = 'h1, h2, h3, h4, p, a, .logo, .hero-badge, .section-label, .hero-trust-item, .hero-badge-item, .float-card span, .float-card div, .price-guarantee span, .price-guarantee-item, .footer-trust-item, .footer-trust-item span, .hero-feature > span:not(.hero-feature-icon), .price-old, .price-save, .price-badges > span, .urgency-label, .expert-stat-value, .expert-stat-label, .cta-guarantee';
         var editable = scope.querySelectorAll(editableSelector);
         var priceGuaranteeSpans = scope.querySelectorAll('.price-box .price-guarantee span, .price-guarantee span');
         var allEditable = [];
@@ -1666,9 +1673,11 @@ function onEditableBlur() {
     syncPreviewToGeneratedHtml();
 }
 
-function onEditableInput() {
+function onEditableInput(e) {
     if (_inlineEditSyncDebounce) clearTimeout(_inlineEditSyncDebounce);
-    _inlineEditSyncDebounce = setTimeout(syncPreviewToGeneratedHtml, 400);
+    var container = getPreviewContainerForElement(e && e.target);
+    var debounceMs = (container && container.id === 'mobileContent') ? 200 : 400;
+    _inlineEditSyncDebounce = setTimeout(syncPreviewToGeneratedHtml, debounceMs);
 }
 
 function injectInlineEditStyles(root) {
@@ -1721,7 +1730,50 @@ function getPreviewContainerForActive() {
     return null;
 }
 
+function getPreviewContainerForElement(el) {
+    if (!el) return null;
+    while (el) {
+        if (el.id === 'desktopContent' || el.id === 'mobileContent') return el;
+        el = (el.getRootNode && el.getRootNode().host) || el.parentNode;
+    }
+    return null;
+}
+
 var _floatingToolbarHideTimeout = null;
+var _savedFormatRange = null;
+
+function isNodeInPreviewContainer(node) {
+    if (!node) return false;
+    var n = node;
+    while (n) {
+        if (n.id === 'desktopContent' || n.id === 'mobileContent') return true;
+        n = (n.getRootNode && n.getRootNode().host) || n.parentNode;
+    }
+    return false;
+}
+
+function saveFormatSelection() {
+    var sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    var range = sel.getRangeAt(0);
+    if (isNodeInPreviewContainer(range.commonAncestorContainer)) {
+        try {
+            _savedFormatRange = range.cloneRange();
+        } catch (e) {
+            _savedFormatRange = null;
+        }
+    }
+}
+
+function getEditableFromRange(range) {
+    if (!range) return null;
+    var n = range.commonAncestorContainer;
+    while (n) {
+        if (n.nodeType === 1 && n.getAttribute && n.getAttribute('contenteditable') === 'true') return n;
+        n = n.parentNode || (n.getRootNode && n.getRootNode().host);
+    }
+    return null;
+}
 
 function showFloatingToolbar(targetEl) {
     var toolbar = document.getElementById('floatingTextToolbar');
@@ -1749,18 +1801,37 @@ function hideFloatingToolbar() {
 function positionFloatingToolbar(targetEl) {
     var toolbar = document.getElementById('floatingTextToolbar');
     if (!toolbar || !targetEl) return;
-    var rect = targetEl.getBoundingClientRect();
     var toolbarRect = toolbar.getBoundingClientRect();
-    var gap = 10;
-    var top = rect.top - (toolbarRect.height || 44) - gap;
-    var left = rect.left + (rect.width / 2) - ((toolbarRect.width || 280) / 2);
-    var minLeft = 8;
-    var maxLeft = window.innerWidth - (toolbarRect.width || 280) - 8;
-    if (left < minLeft) left = minLeft;
-    if (left > maxLeft) left = maxLeft;
-    if (top < 8) top = 8;
-    toolbar.style.top = top + 'px';
-    toolbar.style.left = left + 'px';
+    var isMobile = document.body.classList.contains('mobile-mode');
+    if (isMobile) {
+        toolbar.style.top = 'auto';
+        toolbar.style.bottom = '80px';
+        toolbar.style.left = '50%';
+        toolbar.style.marginLeft = (-(toolbarRect.width || 280) / 2) + 'px';
+    } else {
+        var th = toolbarRect.height || 44;
+        var tw = toolbarRect.width || 280;
+        var gap = 10;
+        var top = 8;
+        var left = 8;
+        var dm = document.getElementById('desktopMockup');
+        var im = document.getElementById('iphoneMockup');
+        var mockup = (dm && !dm.classList.contains('hidden')) ? dm : (im && !im.classList.contains('hidden')) ? im : null;
+        if (mockup) {
+            var mr = mockup.getBoundingClientRect();
+            top = mr.top - th - gap;
+            left = mr.left + (mr.width / 2) - (tw / 2);
+            if (top < 8) top = 8;
+            var minLeft = 8;
+            var maxLeft = window.innerWidth - tw - 8;
+            if (left < minLeft) left = minLeft;
+            if (left > maxLeft) left = maxLeft;
+        }
+        toolbar.style.bottom = '';
+        toolbar.style.marginLeft = '';
+        toolbar.style.top = top + 'px';
+        toolbar.style.left = left + 'px';
+    }
 }
 
 function pushUndoState() {
@@ -1831,14 +1902,20 @@ function onPreviewEditableFocusIn(e) {
     showFloatingToolbar(target);
 }
 
-function onPreviewEditableFocusOut(e) {
-    var related = e.relatedTarget;
-    var toolbar = document.getElementById('floatingTextToolbar');
-    if (toolbar && related && toolbar.contains(related)) return;
-    hideFloatingToolbar();
+function onPreviewEditableFocusOut() {
+    /* Toolbar hide is handled by pointerdown so tapping toolbar does not hide on mobile */
 }
 
 function applyFormatAndSync(cmd, value) {
+    var sel = window.getSelection();
+    if (sel.rangeCount === 0 && _savedFormatRange) {
+        var editable = getEditableFromRange(_savedFormatRange);
+        if (editable) {
+            editable.focus();
+            sel.removeAllRanges();
+            sel.addRange(_savedFormatRange);
+        }
+    }
     pushUndoState();
     document.execCommand(cmd, false, value || null);
     syncPreviewToGeneratedHtml();
@@ -1849,6 +1926,22 @@ function applyFormatAndSync(cmd, value) {
 function initFloatingTextToolbar() {
     var toolbar = document.getElementById('floatingTextToolbar');
     if (!toolbar) return;
+
+    document.addEventListener('selectionchange', saveFormatSelection);
+
+    document.addEventListener('pointerdown', function (e) {
+        if (!toolbar.classList.contains('visible')) return;
+        if (toolbar.contains(e.target)) return;
+        if (document.body.classList.contains('mobile-mode')) {
+            var previewSection = document.getElementById('previewSection');
+            if (previewSection && previewSection.contains(e.target)) return;
+        } else {
+            var previewContainer = document.getElementById('previewContainer');
+            if (previewContainer && previewContainer.contains(e.target)) return;
+        }
+        hideFloatingToolbar();
+    });
+
     var colorBtn = toolbar.querySelector('.ft-color');
     var palette = document.getElementById('ftColorPalette');
     var boldBtn = toolbar.querySelector('.ft-bold');
@@ -1941,22 +2034,24 @@ function scopePreviewHtmlForShadow(fullHtml, isMobile) {
         
         scopedCss += '\n:host { display: flex; width: 100%; height: 100%; overflow: visible; position: relative; justify-content: center; align-items: flex-start; }\n';
         scopedCss += ':host > .preview-content-wrapper { transform: scale(' + scaleFactor + '); transform-origin: top center; width: ' + scaleWidth + '%; margin-left: ' + scaleMargin + '%; margin-right: ' + scaleMargin + '%; height: auto; min-height: 100%; position: relative; display: block; }\n';
-        // Mobile-specific CSS for better organization and layout
+        // Mobile-specific CSS for single-column layout and proper sizing
         scopedCss += ':host section { width: 100% !important; max-width: 100% !important; padding: 1.5rem 0.75rem !important; box-sizing: border-box !important; }\n';
         scopedCss += ':host .hero { padding: 1.5rem 0.75rem !important; min-height: auto !important; width: 100% !important; }\n';
         scopedCss += ':host .hero-content { grid-template-columns: 1fr !important; gap: 1.5rem !important; padding: 0.5rem !important; width: 100% !important; }\n';
         scopedCss += ':host .hero-text { width: 100% !important; text-align: center !important; }\n';
-        scopedCss += ':host .hero-image { width: 100% !important; }\n';
+        scopedCss += ':host .hero-image, :host .hero-visual { width: 100% !important; }\n';
         scopedCss += ':host .testimonials-grid { grid-template-columns: 1fr !important; gap: 1rem !important; width: 100% !important; }\n';
         scopedCss += ':host .testimonial-card { width: 100% !important; margin: 0 !important; }\n';
-        scopedCss += ':host .problem-grid { grid-template-columns: 1fr !important; gap: 1rem !important; width: 100% !important; }\n';
+        scopedCss += ':host .problems-grid, :host .problem-grid { grid-template-columns: 1fr !important; gap: 1rem !important; width: 100% !important; }\n';
         scopedCss += ':host .problem-card { width: 100% !important; margin: 0 !important; }\n';
-        scopedCss += ':host .features-grid { grid-template-columns: 1fr !important; gap: 1rem !important; width: 100% !important; }\n';
-        scopedCss += ':host .feature-card { width: 100% !important; margin: 0 !important; }\n';
+        scopedCss += ':host .solution-grid, :host .features-grid { grid-template-columns: 1fr !important; gap: 1rem !important; width: 100% !important; }\n';
+        scopedCss += ':host .solution-card, :host .feature-card { width: 100% !important; margin: 0 !important; }\n';
         scopedCss += ':host .steps-grid { grid-template-columns: 1fr !important; gap: 1rem !important; width: 100% !important; }\n';
         scopedCss += ':host .step-card { width: 100% !important; margin: 0 !important; }\n';
-        scopedCss += ':host .before-after-grid { grid-template-columns: 1fr !important; gap: 1rem !important; width: 100% !important; }\n';
-        scopedCss += ':host .before-after-card { width: 100% !important; margin: 0 !important; }\n';
+        scopedCss += ':host .ba-grid, :host .before-after-grid { grid-template-columns: 1fr !important; gap: 1rem !important; width: 100% !important; }\n';
+        scopedCss += ':host .ba-card, :host .before-after-card { width: 100% !important; margin: 0 !important; }\n';
+        scopedCss += ':host .lifestyle-container { grid-template-columns: 1fr !important; gap: 1.5rem !important; width: 100% !important; }\n';
+        scopedCss += ':host .ingredients-content { grid-template-columns: 1fr !important; gap: 1.5rem !important; width: 100% !important; }\n';
         scopedCss += ':host .expert-content { grid-template-columns: 1fr !important; gap: 1.5rem !important; text-align: center !important; width: 100% !important; }\n';
         scopedCss += ':host .expert-stats { flex-direction: column !important; gap: 0.75rem !important; width: 100% !important; align-items: center !important; }\n';
         scopedCss += ':host .expert-stat { width: 100% !important; max-width: 100% !important; margin: 0 !important; }\n';
@@ -1964,11 +2059,14 @@ function scopePreviewHtmlForShadow(fullHtml, isMobile) {
         scopedCss += ':host .faq-item { width: 100% !important; margin: 0 !important; }\n';
         scopedCss += ':host .container { max-width: 100% !important; padding: 0 0.75rem !important; width: 100% !important; }\n';
         scopedCss += ':host .nav { width: 100% !important; padding: 0.75rem 0.5rem !important; }\n';
-        scopedCss += ':host .nav-content { flex-direction: column !important; gap: 1rem !important; }\n';
+        scopedCss += ':host .nav-inner, :host .nav-content { flex-direction: column !important; gap: 1rem !important; }\n';
         scopedCss += ':host .nav-links { display: none !important; }\n';
-        scopedCss += ':host .price-box { width: 100% !important; padding: 1.5rem 1rem !important; }\n';
-        scopedCss += ':host .cta-section { padding: 2rem 1rem !important; }\n';
+        scopedCss += ':host .price-card, :host .price-box { width: 100% !important; padding: 1.5rem 1rem !important; text-align: center !important; }\n';
+        scopedCss += ':host .final-cta, :host .cta-section { padding: 2rem 1rem !important; }\n';
         scopedCss += ':host .footer { padding: 2rem 1rem !important; }\n';
+        scopedCss += ':host .ai-slot-hero-product { max-width: 100% !important; }\n';
+        scopedCss += ':host .product-stage { max-width: 100% !important; }\n';
+        scopedCss += ':host .product-ring { max-width: 100% !important; overflow: hidden !important; }\n';
     } else {
         // Desktop: Keep current scaling
         scaleFactor = 0.5; // Scale to 50% of original size
@@ -2176,9 +2274,9 @@ function escapeHtmlForPreview(s) {
 
 function updatePriceGuaranteeInPreview() {
     if (!AppState.generatedHTML) return;
-    var secure = (AppState.customization.priceSecure !== undefined && AppState.customization.priceSecure !== null && String(AppState.customization.priceSecure).trim() !== '') ? String(AppState.customization.priceSecure).trim() : (I18n.ar['priceSecure'] || 'دفع آمن');
-    var shipping = (AppState.customization.priceShipping !== undefined && AppState.customization.priceShipping !== null && String(AppState.customization.priceShipping).trim() !== '') ? String(AppState.customization.priceShipping).trim() : (I18n.ar['priceShipping'] || 'شحن مجاني');
-    var warranty = (AppState.customization.priceWarranty !== undefined && AppState.customization.priceWarranty !== null && String(AppState.customization.priceWarranty).trim() !== '') ? String(AppState.customization.priceWarranty).trim() : (I18n.ar['priceWarranty'] || 'ضمان 30 يوم');
+    var secure = (AppState.customization.priceSecure !== undefined && AppState.customization.priceSecure !== null && String(AppState.customization.priceSecure).trim() !== '') ? String(AppState.customization.priceSecure).trim() : (t('priceSecure') || 'دفع آمن');
+    var shipping = (AppState.customization.priceShipping !== undefined && AppState.customization.priceShipping !== null && String(AppState.customization.priceShipping).trim() !== '') ? String(AppState.customization.priceShipping).trim() : (t('priceShipping') || 'شحن مجاني');
+    var warranty = (AppState.customization.priceWarranty !== undefined && AppState.customization.priceWarranty !== null && String(AppState.customization.priceWarranty).trim() !== '') ? String(AppState.customization.priceWarranty).trim() : (t('priceWarranty') || 'ضمان 30 يوم');
     var desktopEl = document.getElementById('desktopContent');
     var mobileEl = document.getElementById('mobileContent');
     [desktopEl, mobileEl].filter(Boolean).forEach(function (container) {
@@ -2786,6 +2884,87 @@ var TemplateRegistry = {
 };
 
 // ============================================
+// MOBILE RESPONSIVE CSS - injected into generated pages
+// Mirrors the compact layout shown in the editor mobile preview
+// so the exported page looks identical on real mobile devices.
+// ============================================
+var MOBILE_RESPONSIVE_CSS = '\n\
+.price-card, .price-box { text-align: center; }\n\
+@media (max-width: 768px) {\n\
+  section { padding: 2.5rem 1rem !important; }\n\
+  .hero { padding: 2rem 1rem !important; min-height: auto !important; }\n\
+  .hero-content { grid-template-columns: 1fr !important; gap: 1.5rem !important; padding: 1rem 0.5rem !important; text-align: right !important; }\n\
+  .hero-text { text-align: right !important; }\n\
+  .hero-title { font-size: 1.8rem !important; }\n\
+  .hero-title::after { margin: 0.75rem 0 0 auto !important; }\n\
+  .hero-desc { font-size: 0.95rem !important; }\n\
+  .hero-tags { justify-content: flex-start !important; gap: 0.5rem !important; }\n\
+  .hero-tag { font-size: 0.75rem !important; padding: 0.4rem 0.8rem !important; }\n\
+  .hero-feature { justify-content: flex-start !important; font-size: 0.95rem !important; }\n\
+  .hero-trust { justify-content: flex-start !important; gap: 1rem !important; flex-wrap: wrap !important; }\n\
+  .hero-trust-item { font-size: 0.8rem !important; }\n\
+  .hero-visual, .hero-image { width: 100% !important; }\n\
+  .product-stage { max-width: 100% !important; }\n\
+  .ai-slot-hero-product { width: 220px !important; height: 220px !important; }\n\
+  .product-ring-1 { width: 280px !important; height: 280px !important; }\n\
+  .product-ring-2 { width: 240px !important; height: 240px !important; }\n\
+  .product-glow { width: 220px !important; height: 220px !important; }\n\
+  .float-card { display: none !important; }\n\
+  .price-card, .price-box { padding: 1.5rem 1rem !important; border-radius: 20px !important; text-align: center !important; }\n\
+  .price-new { font-size: 2.8rem !important; }\n\
+  .price-old { font-size: 1.1rem !important; }\n\
+  .price-badges { gap: 0.75rem !important; font-size: 0.75rem !important; }\n\
+  .cta-btn { padding: 1rem 2rem !important; font-size: 1rem !important; }\n\
+  .urgency { font-size: 0.85rem !important; padding: 0.75rem !important; }\n\
+  .section-title { font-size: 1.8rem !important; }\n\
+  .section-subtitle { font-size: 0.95rem !important; }\n\
+  .section-label { font-size: 0.8rem !important; padding: 0.4rem 1rem !important; }\n\
+  .section-header { margin-bottom: 2rem !important; }\n\
+  .problems-grid, .problem-grid { grid-template-columns: 1fr !important; gap: 1rem !important; }\n\
+  .problem-card { padding: 1.5rem 1rem !important; }\n\
+  .problem-icon { width: 60px !important; height: 60px !important; font-size: 1.8rem !important; }\n\
+  .solution-grid, .features-grid { grid-template-columns: 1fr !important; gap: 1rem !important; }\n\
+  .solution-card, .feature-card { padding: 1.5rem 1rem !important; }\n\
+  .solution-number, .feature-number { width: 45px !important; height: 45px !important; font-size: 1.1rem !important; }\n\
+  .lifestyle-container { grid-template-columns: 1fr !important; gap: 1.5rem !important; }\n\
+  .lifestyle-desc { text-align: right !important; font-size: 0.95rem !important; }\n\
+  .ai-slot-lifestyle { height: 250px !important; border-radius: 20px !important; }\n\
+  .steps-grid { grid-template-columns: 1fr !important; gap: 1rem !important; }\n\
+  .step-card { padding: 1.5rem 1rem !important; }\n\
+  .step-num { width: 60px !important; height: 60px !important; font-size: 1.5rem !important; }\n\
+  .ba-grid, .before-after-grid { grid-template-columns: 1fr !important; gap: 1rem !important; }\n\
+  .ba-image, .result-image { height: 220px !important; }\n\
+  .ingredients-content { grid-template-columns: 1fr !important; gap: 1.5rem !important; }\n\
+  .ai-slot-ingredient { width: 220px !important; height: 220px !important; }\n\
+  .ingredients-subtitle { font-size: 1.2rem !important; }\n\
+  .testimonials-grid { grid-template-columns: 1fr !important; gap: 1rem !important; }\n\
+  .testimonial-card { padding: 1.5rem 1rem !important; }\n\
+  .testimonial-text { font-size: 0.95rem !important; }\n\
+  .expert-content { grid-template-columns: 1fr !important; gap: 1.5rem !important; text-align: center !important; }\n\
+  .expert-quote { font-size: 1.2rem !important; border-right: none !important; border-bottom: 3px solid var(--primary) !important; padding-right: 0 !important; padding-bottom: 1rem !important; }\n\
+  .expert-stats { justify-content: center !important; gap: 0.75rem !important; flex-wrap: wrap !important; }\n\
+  .expert-stat { padding: 1rem !important; }\n\
+  .expert-stat-value { font-size: 1.8rem !important; }\n\
+  .ai-slot-expert { width: 180px !important; height: 180px !important; }\n\
+  .expert-ring { width: 230px !important; height: 230px !important; }\n\
+  .faq-list { gap: 0.5rem !important; }\n\
+  .faq-question { padding: 1.2rem 1rem !important; font-size: 0.95rem !important; }\n\
+  .faq-answer p { font-size: 0.9rem !important; }\n\
+  .final-cta, .cta-section { padding: 3rem 1rem !important; }\n\
+  .cta-title { font-size: 2rem !important; }\n\
+  .cta-subtitle { font-size: 1rem !important; margin-bottom: 2rem !important; }\n\
+  .cta-btn-white, .cta-button-white { padding: 1rem 2.5rem !important; font-size: 1rem !important; }\n\
+  .footer { padding: 2rem 1rem !important; }\n\
+  .footer-trust { gap: 1.5rem !important; }\n\
+  .footer-trust-item { font-size: 0.85rem !important; }\n\
+  .nav-inner { padding: 0.5rem 1rem !important; border-radius: 20px !important; }\n\
+  .nav-cta { padding: 0.5rem 1.2rem !important; font-size: 0.8rem !important; }\n\
+  .logo { font-size: 1.2rem !important; }\n\
+  .container { padding: 0 1rem !important; }\n\
+  .hero-badge-bar { font-size: 0.8rem !important; padding: 0.5rem !important; }\n\
+}\n';
+
+// ============================================
 // ENHANCED LANDING PAGE GENERATOR - DEFAULT TEMPLATE
 // ============================================
 function buildDefaultTemplateData(inputs, images, ctx) {
@@ -2879,18 +3058,18 @@ function buildDefaultTemplateData(inputs, images, ctx) {
             afterLabel: I18n.ar['afterLabel'] || 'بعد ✓',
             beforeText: I18n.ar['beforeText'] || 'قبل الاستخدام',
             afterText: I18n.ar['afterText'] || 'بعد الاستخدام',
-            priceSecure: (custom && custom.priceSecure !== undefined && String(custom.priceSecure).trim() !== '') ? String(custom.priceSecure).trim() : (I18n.ar['priceSecure'] || 'دفع آمن'),
-            priceShipping: (custom && custom.priceShipping !== undefined && String(custom.priceShipping).trim() !== '') ? String(custom.priceShipping).trim() : (I18n.ar['priceShipping'] || 'شحن مجاني'),
-            priceWarranty: (custom && custom.priceWarranty !== undefined && String(custom.priceWarranty).trim() !== '') ? String(custom.priceWarranty).trim() : (I18n.ar['priceWarranty'] || 'ضمان 30 يوم'),
+            priceSecure: (custom && custom.priceSecure !== undefined && String(custom.priceSecure).trim() !== '') ? String(custom.priceSecure).trim() : (I18n[lang] && I18n[lang]['priceSecure']) || 'دفع آمن',
+            priceShipping: (custom && custom.priceShipping !== undefined && String(custom.priceShipping).trim() !== '') ? String(custom.priceShipping).trim() : (I18n[lang] && I18n[lang]['priceShipping']) || 'شحن مجاني',
+            priceWarranty: (custom && custom.priceWarranty !== undefined && String(custom.priceWarranty).trim() !== '') ? String(custom.priceWarranty).trim() : (I18n[lang] && I18n[lang]['priceWarranty']) || 'ضمان 30 يوم',
             trustSecure: I18n.ar['trustSecure'] || 'دفع آمن 100%',
             trustShipping: I18n.ar['trustShipping'] || 'شحن مجاني',
             trustRefund: I18n.ar['trustRefund'] || 'ضمان استرداد',
             problemCardSuffix: I18n.ar['problemCardSuffix'] || 'نحن نفهم ما تمر به، ولذلك طورنا'
         },
         lang: lang,
-        extraCss: (window.DEFAULT_TEMPLATE_CSS || '').replace(/^\uFEFF/, ''),
+        extraCss: (window.DEFAULT_TEMPLATE_CSS || '').replace(/^\uFEFF/, '') + '\n' + MOBILE_RESPONSIVE_CSS,
         inlineScript: inlineScript,
-        sectionOrder: (ctx.sectionOrder && Array.isArray(ctx.sectionOrder)) ? ctx.sectionOrder : ['hero', 'problem', 'solution', 'howItWorks', 'beforeAfter', 'testimonials', 'expert', 'faq', 'cta', 'footer']
+        sectionOrder: (ctx.sectionOrder && Array.isArray(ctx.sectionOrder)) ? ctx.sectionOrder : ['hero', 'problem', 'solution', 'lifestyle', 'howItWorks', 'beforeAfter', 'ingredients', 'testimonials', 'expert', 'faq', 'cta', 'footer']
     };
 }
 
@@ -2989,7 +3168,7 @@ const LandingPageGenerator = {
             testimonials: testimonials, faqs: faqs, oldPrice: oldPrice, heroImage: heroImage, beforeImage: beforeImage,
             afterImage: afterImage, expertImage: expertImage, categoryName: categoryName, heroBackground: heroBackground,
             ctaText: 'اطلب الآن واحصل على خصم 33%',
-            sectionOrder: (AppState.premium && AppState.premium.sectionOrder) ? AppState.premium.sectionOrder.slice() : ['hero', 'problem', 'solution', 'howItWorks', 'beforeAfter', 'testimonials', 'expert', 'faq', 'cta', 'footer']
+            sectionOrder: (AppState.premium && AppState.premium.sectionOrder) ? AppState.premium.sectionOrder.slice() : ['hero', 'problem', 'solution', 'lifestyle', 'howItWorks', 'beforeAfter', 'ingredients', 'testimonials', 'expert', 'faq', 'cta', 'footer']
         });
         return template.render(data);
     }
@@ -3173,21 +3352,25 @@ function initEventListeners() {
         updateThemePreview(e.target.value);
     });
     
-    // View mode toggle
+    // View mode toggle (only show mockup if page was already generated)
     document.getElementById('desktopViewBtn').addEventListener('click', () => {
         AppState.currentView = 'desktop';
         document.getElementById('desktopViewBtn').classList.add('active');
         document.getElementById('mobileViewBtn').classList.remove('active');
-        document.getElementById('desktopMockup').classList.remove('hidden');
-        document.getElementById('iphoneMockup').classList.add('hidden');
+        if (AppState.hasGeneratedOnce) {
+            document.getElementById('desktopMockup').classList.remove('hidden');
+            document.getElementById('iphoneMockup').classList.add('hidden');
+        }
     });
     
     document.getElementById('mobileViewBtn').addEventListener('click', () => {
         AppState.currentView = 'mobile';
         document.getElementById('mobileViewBtn').classList.add('active');
         document.getElementById('desktopViewBtn').classList.remove('active');
-        document.getElementById('iphoneMockup').classList.remove('hidden');
-        document.getElementById('desktopMockup').classList.add('hidden');
+        if (AppState.hasGeneratedOnce) {
+            document.getElementById('iphoneMockup').classList.remove('hidden');
+            document.getElementById('desktopMockup').classList.add('hidden');
+        }
     });
     
     // Generate button
@@ -3260,10 +3443,32 @@ function initEventListeners() {
             }
         });
 
+        function positionThemeDropdownBelowChevron() {
+            if (!document.body.classList.contains('mobile-mode')) return;
+            var dropdown = document.getElementById('themeDropdown');
+            var btn = document.querySelector('.mobile-theme-chevron');
+            if (!dropdown || !btn || dropdown.classList.contains('hidden')) return;
+            var r = btn.getBoundingClientRect();
+            var gap = 8;
+            var padding = 12;
+            dropdown.style.top = (r.bottom + gap) + 'px';
+            dropdown.style.bottom = 'auto';
+            var w = 260;
+            var viewportW = window.innerWidth;
+            var left = r.left + (r.width / 2) - (w / 2);
+            if (left < padding) left = padding;
+            if (left + w > viewportW - padding) left = viewportW - w - padding;
+            dropdown.style.left = left + 'px';
+            dropdown.style.right = 'auto';
+        }
+
         if (themeDropdownTrigger) {
             themeDropdownTrigger.addEventListener('click', function(e) {
                 e.stopPropagation();
                 themeDropdown.classList.toggle('hidden');
+                if (document.body.classList.contains('mobile-mode') && !themeDropdown.classList.contains('hidden')) {
+                    positionThemeDropdownBelowChevron();
+                }
             });
         }
 
@@ -3330,7 +3535,8 @@ function initEventListeners() {
                 e.stopPropagation();
             });
         }
-        document.addEventListener('click', function themeDropdownClose() {
+        document.addEventListener('click', function themeDropdownClose(e) {
+            if (e.target && e.target.closest && e.target.closest('.mobile-theme-chevron')) return;
             themeDropdown.classList.add('hidden');
         });
     }
@@ -3340,7 +3546,34 @@ function initEventListeners() {
     document.querySelectorAll('.lang-btn').forEach(btn => {
         btn.addEventListener('click', () => switchLanguage(btn.dataset.lang));
     });
-    
+
+    // Language dropdown: trigger toggles panel
+    var langTrigger = document.getElementById('langTrigger');
+    var langDropdown = document.getElementById('langDropdown');
+    if (langTrigger && langDropdown) {
+        langTrigger.addEventListener('click', function(e) {
+            e.stopPropagation();
+            langDropdown.classList.toggle('hidden');
+            langTrigger.setAttribute('aria-expanded', !langDropdown.classList.contains('hidden'));
+        });
+    }
+    var mobileLangTrigger = document.getElementById('mobileLangTrigger');
+    var mobileLangDropdown = document.getElementById('mobileLangDropdown');
+    if (mobileLangTrigger && mobileLangDropdown) {
+        mobileLangTrigger.addEventListener('click', function(e) {
+            e.stopPropagation();
+            mobileLangDropdown.classList.toggle('hidden');
+            mobileLangTrigger.setAttribute('aria-expanded', !mobileLangDropdown.classList.contains('hidden'));
+        });
+    }
+    document.addEventListener('click', function() {
+        closeLangDropdowns();
+    });
+    if (langDropdown) langDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
+    if (mobileLangDropdown) mobileLangDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
+
+    updateLangTriggerLabels();
+
     // Open preview in new tab
     const openInNewTabBtn = document.getElementById('openInNewTabBtn');
     if (openInNewTabBtn) openInNewTabBtn.addEventListener('click', openPreviewInNewTab);
@@ -3351,11 +3584,34 @@ function initEventListeners() {
     });
 }
 
+function closeLangDropdowns() {
+    var d1 = document.getElementById('langDropdown');
+    var d2 = document.getElementById('mobileLangDropdown');
+    if (d1) d1.classList.add('hidden');
+    if (d2) d2.classList.add('hidden');
+    var t1 = document.getElementById('langTrigger');
+    var t2 = document.getElementById('mobileLangTrigger');
+    if (t1) t1.setAttribute('aria-expanded', 'false');
+    if (t2) t2.setAttribute('aria-expanded', 'false');
+}
+
+function updateLangTriggerLabels() {
+    var lang = AppState.currentLang;
+    var labels = { ar: 'العربية', en: 'English', fr: 'Français' };
+    var shortLabels = { ar: 'AR', en: 'EN', fr: 'FR' };
+    var triggerDesktop = document.querySelector('#langTrigger .lang-trigger-label');
+    if (triggerDesktop) triggerDesktop.textContent = labels[lang] || lang;
+    var triggerMobile = document.querySelector('#mobileLangTrigger .lang-trigger-label');
+    if (triggerMobile) triggerMobile.textContent = shortLabels[lang] || lang;
+}
+
 function switchLanguage(lang) {
     AppState.currentLang = lang;
     document.querySelectorAll('.lang-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.lang === lang);
     });
+    closeLangDropdowns();
+    updateLangTriggerLabels();
     applyI18n();
     initFonts();
     initBackgrounds();
@@ -3369,8 +3625,10 @@ var SECTION_ORDER_LABELS = {
     hero: 'هيرو',
     problem: 'المشاكل',
     solution: 'الحلول',
+    lifestyle: 'التجربة',
     howItWorks: 'كيف يعمل',
     beforeAfter: 'قبل وبعد',
+    ingredients: 'المكونات',
     testimonials: 'آراء العملاء',
     expert: 'توصية الخبير',
     faq: 'الأسئلة الشائعة',
@@ -3424,7 +3682,7 @@ function regeneratePreviewFromSectionOrder(movedSectionId) {
 function renderSectionOrderList() {
     var list = document.getElementById('sectionOrderList');
     if (!list) return;
-    var order = (AppState.premium && AppState.premium.sectionOrder) ? AppState.premium.sectionOrder : ['hero', 'problem', 'solution', 'howItWorks', 'beforeAfter', 'testimonials', 'expert', 'faq', 'cta', 'footer'];
+    var order = (AppState.premium && AppState.premium.sectionOrder) ? AppState.premium.sectionOrder : ['hero', 'problem', 'solution', 'lifestyle', 'howItWorks', 'beforeAfter', 'ingredients', 'testimonials', 'expert', 'faq', 'cta', 'footer'];
     var titleUp = t('sectionOrderUp') || 'أعلى';
     var titleDown = t('sectionOrderDown') || 'أسفل';
     list.innerHTML = order.map(function (id, index) {
@@ -3450,7 +3708,7 @@ function renderSectionOrderList() {
 }
 
 function moveSectionUp(sectionId) {
-    var order = (AppState.premium && AppState.premium.sectionOrder) ? AppState.premium.sectionOrder : ['hero', 'problem', 'solution', 'howItWorks', 'beforeAfter', 'testimonials', 'expert', 'faq', 'cta', 'footer'];
+    var order = (AppState.premium && AppState.premium.sectionOrder) ? AppState.premium.sectionOrder : ['hero', 'problem', 'solution', 'lifestyle', 'howItWorks', 'beforeAfter', 'ingredients', 'testimonials', 'expert', 'faq', 'cta', 'footer'];
     var i = order.indexOf(sectionId);
     if (i <= 0) return;
     order = order.slice();
@@ -3462,7 +3720,7 @@ function moveSectionUp(sectionId) {
 }
 
 function moveSectionDown(sectionId) {
-    var order = (AppState.premium && AppState.premium.sectionOrder) ? AppState.premium.sectionOrder : ['hero', 'problem', 'solution', 'howItWorks', 'beforeAfter', 'testimonials', 'expert', 'faq', 'cta', 'footer'];
+    var order = (AppState.premium && AppState.premium.sectionOrder) ? AppState.premium.sectionOrder : ['hero', 'problem', 'solution', 'lifestyle', 'howItWorks', 'beforeAfter', 'ingredients', 'testimonials', 'expert', 'faq', 'cta', 'footer'];
     var i = order.indexOf(sectionId);
     if (i < 0 || i >= order.length - 1) return;
     order = order.slice();
@@ -3592,7 +3850,11 @@ async function handleGenerate() {
         updateStatus('ready', 'created');
         showToast(t('created'), 'success');
         AppState.hasGeneratedOnce = true;
-        openCustomizationPanel();
+        if (document.body.classList.contains('mobile-mode')) {
+            document.body.classList.remove('right-drawer-open');
+        } else {
+            openCustomizationPanel();
+        }
         
     } catch (error) {
         console.error('Generation error:', error);
@@ -3647,7 +3909,7 @@ function doExportHtml() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `landing-page-${Date.now()}.html`;
+    a.download = 'index.html';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -3775,7 +4037,7 @@ function getNewWindowToolbarHtmlAndScript() {
         '<button type="button" class="ft-btn ft-undo" id="ftUndoBtn" title="رجوع" disabled>↶</button>' +
         '<button type="button" class="ft-btn ft-redo" id="ftRedoBtn" title="تقدم" disabled>↷</button></div></div></div>';
     var toolbarCss = '<style id="ft-new-window-styles">.ft-new-window-toolbar{position:fixed;z-index:9999;opacity:0;transform:translateY(8px) scale(0.96);pointer-events:none;transition:opacity .2s ease,transform .2s ease}.ft-new-window-toolbar.visible{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}.ft-new-window-toolbar.hidden{display:none!important}.ft-new-window-toolbar:not(.hidden){display:block}.ft-toolbar-inner{display:flex;align-items:center;gap:2px;padding:6px 8px;border-radius:12px;background:linear-gradient(135deg,rgba(30,41,59,.85) 0%,rgba(15,23,42,.9) 100%);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.1);box-shadow:0 8px 32px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06)}.ft-toolbar-group{display:flex;align-items:center;gap:2px;position:relative}.ft-toolbar-divider{width:1px;height:20px;background:rgba(255,255,255,.12);margin:0 4px}.ft-btn{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:8px;background:transparent;color:rgba(255,255,255,.85);cursor:pointer;font-size:14px;font-weight:700}.ft-btn:hover:not(:disabled){background:rgba(255,255,255,.12);color:#fff}.ft-btn:disabled{opacity:.4;cursor:not-allowed}.ft-icon{width:18px;height:18px}.ft-color-palette{position:absolute;bottom:100%;left:0;margin-bottom:6px;padding:8px;border-radius:10px;background:rgba(30,41,59,.95);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);box-shadow:0 8px 24px rgba(0,0,0,.35);display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.ft-color-palette.hidden{display:none!important}.ft-palette-color{width:28px;height:28px;border-radius:6px;border:2px solid transparent;cursor:pointer}.ft-drag-handle{cursor:grab;padding:0 6px;margin-right:2px;color:rgba(255,255,255,.5);font-size:14px;user-select:none}.ft-drag-handle:active{cursor:grabbing}</style>';
-    var editableSelector = 'h1, h2, h3, h4, p, a, .logo, .hero-badge, .section-label, .hero-trust-item, .hero-badge-item, .float-item span, .float-item div, .price-guarantee span, .price-guarantee-item, .footer-trust-item, .footer-trust-item span, .hero-benefits li span, .price-original, .price-discount, .urgency-text, .cta-guarantee';
+    var editableSelector = 'h1, h2, h3, h4, p, a, .logo, .hero-badge, .section-label, .hero-trust-item, .hero-badge-item, .float-card span, .float-card div, .price-guarantee span, .price-guarantee-item, .footer-trust-item, .footer-trust-item span, .hero-feature > span:not(.hero-feature-icon), .price-old, .price-save, .price-badges > span, .urgency-label, .expert-stat-value, .expert-stat-label, .cta-guarantee';
     var script = '<script>(function(){var MAX_UNDO=10,undo=[],redo=[];function pushUndo(){var html=document.body.innerHTML;undo.push(html);if(undo.length>MAX_UNDO)undo.shift();redo=[];}function updateBtns(){var u=document.getElementById("ftUndoBtn"),r=document.getElementById("ftRedoBtn");if(u)u.disabled=undo.length===0;if(r)r.disabled=redo.length===0;}function applyCmd(cmd,val){pushUndo();document.execCommand(cmd,false,val||null);updateBtns();}function positionToolbar(el){var t=document.getElementById("floatingTextToolbar");if(!t||!el)return;var r=el.getBoundingClientRect(),tr=t.getBoundingClientRect(),g=10,top=r.top-(tr.height||44)-g,left=r.left+r.width/2-(tr.width||280)/2;left=Math.max(8,Math.min(window.innerWidth-(tr.width||280)-8,left));top=Math.max(8,top);t.style.top=top+"px";t.style.left=left+"px";}function showToolbar(el){var t=document.getElementById("floatingTextToolbar");if(!t)return;t.classList.remove("hidden");t.classList.add("visible");positionToolbar(el);updateBtns();}function hideToolbar(){var t=document.getElementById("floatingTextToolbar");if(!t)return;t.classList.add("hidden");t.classList.remove("visible");var p=document.getElementById("ftColorPalette");if(p)p.classList.add("hidden");}var hideT;document.body.addEventListener("focusin",function(e){var el=e.target;if(!el||el.getAttribute("contenteditable")!=="true")return;pushUndo();clearTimeout(hideT);showToolbar(el);});document.body.addEventListener("focusout",function(e){if(e.relatedTarget&&document.getElementById("floatingTextToolbar").contains(e.relatedTarget))return;hideT=setTimeout(hideToolbar,150);});var sel="'+ editableSelector.replace(/'/g, "\\'") +'";document.querySelectorAll(sel).forEach(function(el){el.setAttribute("contenteditable","true");});var pg=document.querySelector(".price-guarantee");if(pg)pg.setAttribute("contenteditable","false");var toolbar=document.getElementById("floatingTextToolbar");if(toolbar){var colorBtn=toolbar.querySelector(".ft-color"),palette=document.getElementById("ftColorPalette");if(colorBtn&&palette){colorBtn.onclick=function(e){e.stopPropagation();palette.classList.toggle("hidden");};palette.querySelectorAll(".ft-palette-color").forEach(function(b){b.onclick=function(e){e.preventDefault();var c=b.getAttribute("data-color");if(c)applyCmd("foreColor",c);palette.classList.add("hidden");};});}document.addEventListener("click",function(e){if(palette&&!palette.classList.contains("hidden")&&!palette.contains(e.target)&&!colorBtn.contains(e.target))palette.classList.add("hidden");});toolbar.querySelector(".ft-bold").onclick=function(){applyCmd("bold");};toolbar.querySelectorAll(".ft-align").forEach(function(b){b.onclick=function(){var a=b.getAttribute("data-align");applyCmd(a==="left"?"justifyLeft":a==="center"?"justifyCenter":"justifyRight");};});document.getElementById("ftUndoBtn").onclick=function(){if(undo.length===0)return;redo.push(document.body.innerHTML);document.body.innerHTML=undo.pop();updateBtns();};document.getElementById("ftRedoBtn").onclick=function(){if(redo.length===0)return;undo.push(document.body.innerHTML);document.body.innerHTML=redo.pop();updateBtns();};var handle=toolbar.querySelector(".ft-drag-handle");if(handle){var dx,dy,tx,ty;handle.onmousedown=function(e){e.preventDefault();var r=toolbar.getBoundingClientRect();dx=e.clientX;dy=e.clientY;tx=r.left;ty=r.top;function move(ev){toolbar.style.left=(tx+ev.clientX-dx)+"px";toolbar.style.top=(ty+ev.clientY-dy)+"px";}function up(){document.removeEventListener("mousemove",move);document.removeEventListener("mouseup",up);}document.addEventListener("mousemove",move);document.addEventListener("mouseup",up);};}})}})();<\/script>';
     return { html: toolbarHtml, css: toolbarCss, script: script };
 }
@@ -3799,11 +4061,76 @@ function openPreviewInNewTab() {
 }
 
 // ============================================
+// MOBILE LAYER (visual only – no business logic)
+// ============================================
+var MOBILE_BREAKPOINT = 768;
+
+function updateMobileMode() {
+    var isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+    document.body.classList.toggle('mobile-mode', isMobile);
+    if (!isMobile) document.body.classList.remove('right-drawer-open');
+    AppState.currentView = isMobile ? 'mobile' : 'desktop';
+    var dm = document.getElementById('desktopMockup');
+    var im = document.getElementById('iphoneMockup');
+    if (dm && im) {
+        if (!AppState.hasGeneratedOnce) {
+            dm.classList.add('hidden');
+            im.classList.add('hidden');
+        } else if (AppState.currentView === 'mobile') {
+            dm.classList.add('hidden');
+            im.classList.remove('hidden');
+        } else {
+            dm.classList.remove('hidden');
+            im.classList.add('hidden');
+        }
+    }
+    var db = document.getElementById('desktopViewBtn');
+    var mb = document.getElementById('mobileViewBtn');
+    if (db && mb) {
+        if (AppState.currentView === 'mobile') {
+            mb.classList.add('active');
+            db.classList.remove('active');
+        } else {
+            db.classList.add('active');
+            mb.classList.remove('active');
+        }
+    }
+}
+
+function initMobileLayer() {
+    updateMobileMode();
+    window.addEventListener('resize', updateMobileMode);
+
+    var editBtn = document.getElementById('mobile-edit-btn');
+    if (editBtn) {
+        editBtn.addEventListener('click', function () {
+            document.body.classList.toggle('right-drawer-open');
+        });
+    }
+
+    var overlay = document.getElementById('mobileRightOverlay');
+    if (overlay) {
+        overlay.addEventListener('click', function () {
+            document.body.classList.remove('right-drawer-open');
+        });
+    }
+
+    var fullscreenBtn = document.getElementById('mobileFullscreenPreviewBtn');
+    var previewSection = document.getElementById('previewSection');
+    if (fullscreenBtn && previewSection) {
+        fullscreenBtn.addEventListener('click', function () {
+            previewSection.classList.toggle('fullscreen-preview');
+        });
+    }
+}
+
+// ============================================
 // INITIALIZATION
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
     ApiClient.baseUrl = window.location.origin;
     initEventListeners();
+    initMobileLayer();
     initFloatingTextToolbar();
     applyI18n();
     updateStatus('waiting', 'waitingImage');

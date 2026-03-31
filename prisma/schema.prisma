@@ -1,0 +1,302 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/db/generated/prisma"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  plan      Plan     @default(DEMO)
+  createdAt DateTime @default(now())
+  usages    Usage[]
+  subscriptions Subscription[]
+  creditBalance CreditBalance?
+  creditReservations CreditReservation[]
+  creditLedgerEntries CreditLedgerEntry[]
+  creditGrants CreditGrant[]
+  creditPurchases CreditPurchase[]
+  billingCustomers BillingCustomer[]
+  billingWebhookEvents BillingWebhookEvent[]
+  generationRequests GenerationRequest[]
+  sessions Session[]
+}
+
+model Usage {
+  id        String   @id @default(uuid())
+  userId    String
+  periodKey String
+  requests  Int      @default(0)
+  images    Int      @default(0)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, periodKey])
+}
+
+model Subscription {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  plan             Plan
+  status           String
+  provider         String?
+  externalId       String?  @unique
+  currentPeriodStart DateTime?
+  currentPeriodEnd DateTime
+  cancelAtPeriodEnd Boolean @default(false)
+  planCode         String?
+  createdAt        DateTime @default(now())
+  creditGrants      CreditGrant[]
+
+  @@index([userId])
+}
+
+model CreditBalance {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  credits   Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model CreditReservation {
+  id          String              @id @default(cuid())
+  userId      String
+  amount      Int
+  status      ReservationStatus   @default(PENDING)
+  createdAt   DateTime            @default(now())
+  expiresAt   DateTime
+  finalizedAt DateTime?
+  user        User                @relation(fields: [userId], references: [id])
+  ledgerEntries CreditLedgerEntry[]
+  generationRequests GenerationRequest[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model CreditLedgerEntry {
+  id              String          @id @default(cuid())
+  userId          String
+  direction       CreditDirection
+  amount          Int
+  reason          CreditLedgerReason
+  idempotencyKey  String?
+  reservationId   String?
+  grantId         String?
+  purchaseId      String?
+  generationRequestId String?
+  createdAt       DateTime        @default(now())
+
+  user            User            @relation(fields: [userId], references: [id])
+  reservation     CreditReservation? @relation(fields: [reservationId], references: [id])
+  grant           CreditGrant?    @relation(fields: [grantId], references: [id])
+  purchase        CreditPurchase? @relation(fields: [purchaseId], references: [id])
+  generationRequest GenerationRequest? @relation(fields: [generationRequestId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([reservationId])
+  @@index([grantId])
+  @@index([purchaseId])
+  @@index([generationRequestId])
+  @@unique([idempotencyKey])
+}
+
+model CreditGrant {
+  id             String     @id @default(cuid())
+  userId         String
+  subscriptionId String?
+  periodKey      String
+  amount         Int
+  createdAt      DateTime   @default(now())
+
+  user           User       @relation(fields: [userId], references: [id])
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+  ledgerEntries  CreditLedgerEntry[]
+
+  @@index([userId, createdAt])
+  @@index([subscriptionId])
+  @@unique([userId, subscriptionId, periodKey])
+}
+
+model CreditPurchase {
+  id            String   @id @default(cuid())
+  userId        String
+  provider      String?
+  externalId    String?  @unique
+  status        String   @default("PENDING")
+  currency      String?
+  amountCents   Int?
+  credits       Int
+  createdAt     DateTime @default(now())
+  paidAt        DateTime?
+
+  user          User     @relation(fields: [userId], references: [id])
+  ledgerEntries CreditLedgerEntry[]
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model BillingCustomer {
+  id          String   @id @default(cuid())
+  userId      String
+  provider    String
+  externalId  String
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@unique([provider, externalId])
+  @@unique([userId, provider])
+}
+
+model BillingWebhookEvent {
+  id            String   @id @default(cuid())
+  userId        String?
+  provider      String
+  externalId    String
+  type          String?
+  payload       Json
+  receivedAt    DateTime @default(now())
+  processedAt   DateTime?
+
+  user          User?    @relation(fields: [userId], references: [id])
+
+  @@index([provider, receivedAt])
+  @@unique([provider, externalId])
+}
+
+model GenerationRequest {
+  id               String            @id @default(cuid())
+  userId           String
+  operation        String
+  status           GenerationStatus  @default(CREATED)
+  input            Json
+  idempotencyKey   String?
+  creditReservationId String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id])
+  creditReservation CreditReservation? @relation(fields: [creditReservationId], references: [id])
+  jobs             GenerationJob[]
+  artifacts        GenerationArtifact[]
+  ledgerEntries    CreditLedgerEntry[]
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([creditReservationId])
+  @@unique([idempotencyKey])
+}
+
+model GenerationJob {
+  id                 String            @id @default(cuid())
+  generationRequestId String
+  provider           String
+  externalId         String?
+  status             GenerationJobStatus @default(QUEUED)
+  attempt            Int               @default(1)
+  startedAt          DateTime?
+  finishedAt         DateTime?
+  lastHeartbeatAt    DateTime?
+  error              Json?
+  metrics            Json?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  generationRequest  GenerationRequest @relation(fields: [generationRequestId], references: [id])
+  artifacts          GenerationArtifact[]
+
+  @@index([generationRequestId])
+  @@index([provider, createdAt])
+  @@index([status])
+  @@unique([provider, externalId])
+}
+
+model GenerationArtifact {
+  id               String           @id @default(cuid())
+  generationRequestId String
+  generationJobId  String?
+  kind             GenerationArtifactKind
+  url              String?
+  data             Json?
+  metadata         Json?
+  createdAt        DateTime         @default(now())
+
+  generationRequest GenerationRequest @relation(fields: [generationRequestId], references: [id])
+  generationJob     GenerationJob?    @relation(fields: [generationJobId], references: [id])
+
+  @@index([generationRequestId])
+  @@index([generationJobId])
+  @@index([kind])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+enum Plan {
+  DEMO
+  BASIC
+  PRO
+  AGENCY
+}
+
+enum ReservationStatus {
+  PENDING
+  FINALIZED
+  ROLLED_BACK
+}
+
+enum CreditDirection {
+  CREDIT
+  DEBIT
+}
+
+enum CreditLedgerReason {
+  reservation_hold
+  reservation_finalize
+  reservation_rollback
+  subscription_grant
+  topup_purchase
+  manual_adjustment
+}
+
+enum GenerationStatus {
+  CREATED
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum GenerationJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum GenerationArtifactKind {
+  image
+  html
+  css
+  json
+  zip
+  single_file_html
+}

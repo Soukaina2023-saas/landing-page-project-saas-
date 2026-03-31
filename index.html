@@ -148,17 +148,17 @@
                     <div class="space-y-3">
                         <div class="space-y-1">
                             <label class="block text-xs font-medium text-slate-300" data-i18n="priceLabelSecure">دفع آمن</label>
-                            <input type="text" id="inputPriceSecure" placeholder="دفع آمن" maxlength="80"
+                            <input type="text" id="inputPriceSecure" data-i18n-placeholder="priceSecure" maxlength="80"
                                 class="w-full px-4 py-2.5 input-glow rounded-xl text-sm text-white placeholder-slate-500 text-right focus:outline-none">
                         </div>
                         <div class="space-y-1">
                             <label class="block text-xs font-medium text-slate-300" data-i18n="priceLabelShipping">شحن مجاني</label>
-                            <input type="text" id="inputPriceShipping" placeholder="شحن مجاني" maxlength="80"
+                            <input type="text" id="inputPriceShipping" data-i18n-placeholder="priceShipping" maxlength="80"
                                 class="w-full px-4 py-2.5 input-glow rounded-xl text-sm text-white placeholder-slate-500 text-right focus:outline-none">
                         </div>
                         <div class="space-y-1">
                             <label class="block text-xs font-medium text-slate-300" data-i18n="priceLabelWarranty">ضمان (مثال: ضمان 30 يوم)</label>
-                            <input type="text" id="inputPriceWarranty" placeholder="ضمان 30 يوم" maxlength="80"
+                            <input type="text" id="inputPriceWarranty" data-i18n-placeholder="priceWarranty" maxlength="80"
                                 class="w-full px-4 py-2.5 input-glow rounded-xl text-sm text-white placeholder-slate-500 text-right focus:outline-none">
                         </div>
                     </div>
@@ -417,19 +417,20 @@
                 </button>
                 <div class="customization-section-body">
                     <div id="premiumPowerContent">
+                        <!-- تعديل النص في المعاينة: متاح لجميع المستخدمين (حاسوب + موبايل) -->
+                        <label class="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer mb-4">
+                            <div>
+                                <span class="text-sm text-slate-300 block" data-i18n="inlineEdit">تعديل النص مباشرة</span>
+                                <span class="text-[10px] text-slate-500" data-i18n="inlineEditDesc">اضغط على أي نص في المعاينة لتعديله</span>
+                            </div>
+                            <input type="checkbox" id="enableInlineEdit" class="w-5 h-5 rounded border-slate-500 text-purple-500 focus:ring-purple-500">
+                        </label>
                         <!-- Free: upgrade CTA -->
                         <div id="premiumUpgradeCta" class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center">
                             <p class="text-sm text-amber-200/90" data-i18n="upgradeToUnlock">ترقية لتفعيل التعديل المباشر، التخطيط، القوالب، الودجات والشعار</p>
                         </div>
                         <!-- Premium: actual tools (hidden when !isPremium) -->
                         <div id="premiumToolsContent" class="hidden space-y-4">
-                            <label class="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer">
-                                <div>
-                                    <span class="text-sm text-slate-300 block" data-i18n="inlineEdit">تعديل النص مباشرة</span>
-                                    <span class="text-[10px] text-slate-500" data-i18n="inlineEditDesc">اضغط على أي نص في المعاينة لتعديله</span>
-                                </div>
-                                <input type="checkbox" id="enableInlineEdit" class="w-5 h-5 rounded border-slate-500 text-purple-500 focus:ring-purple-500">
-                            </label>
                             <div>
                                 <span class="text-xs text-slate-400 block mb-2" data-i18n="premiumTemplates">قوالب احترافية</span>
                                 <div class="flex flex-wrap gap-2 mb-3" id="premiumTemplateOptions">
@@ -486,6 +487,7 @@
 
     <!-- Header – نفس مقاس ومكان Theme 1: منزل قليلاً ومصغّر من الجانبين -->
     <header class="glass-card h-16 flex items-center justify-between px-6 shrink-0 z-20 relative mx-4 mt-4 rounded-2xl">
+        <button type="button" id="mobile-edit-btn" class="mobile-edit-btn" aria-label="تعديل"><span>تعديل</span></button>
         <div class="flex items-center gap-3">
             <!-- شعار MsService من Theme 1 – أيقونة MS مع animation -->
             <div class="ms-logo float glow-purple">
@@ -498,9 +500,9 @@
         </div>
         
         <div class="lang-switcher flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/10">
-            <button class="lang-btn active px-3 py-1.5 text-xs font-medium rounded-lg transition-all" data-lang="ar">العربية</button>
-            <button class="lang-btn px-3 py-1.5 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition-all" data-lang="en">English</button>
-            <button class="lang-btn px-3 py-1.5 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition-all" data-lang="fr">Français</button>
+            <button class="lang-btn active px-3 py-1.5 text-xs font-medium rounded-lg transition-all" data-lang="ar"><span class="lang-full">العربية</span><span class="lang-short">AR</span></button>
+            <button class="lang-btn px-3 py-1.5 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition-all" data-lang="en"><span class="lang-full">English</span><span class="lang-short">EN</span></button>
+            <button class="lang-btn px-3 py-1.5 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition-all" data-lang="fr"><span class="lang-full">Français</span><span class="lang-short">FR</span></button>
         </div>
 
         <div class="flex items-center gap-3">
@@ -537,11 +539,13 @@
         </div>
     </header>
 
+    <div id="mobileRightOverlay" class="mobile-right-overlay" aria-hidden="true"></div>
+
     <!-- Main Workspace -->
     <main class="flex-1 flex overflow-hidden relative z-10 p-4 gap-4">
         
-        <!-- RIGHT COLUMN: Inputs Panel -->
-        <aside class="inputs-panel w-80 glass rounded-2xl flex flex-col overflow-hidden">
+        <!-- Product Details Panel (drawer on mobile) -->
+        <aside id="rightPanel" class="inputs-panel w-80 glass rounded-2xl flex flex-col overflow-hidden">
             <div class="p-6 overflow-y-auto flex-1 space-y-6">
                 
                 <!-- Product Image Upload Section -->
@@ -555,7 +559,9 @@
                         <input type="file" id="productImage" accept="image/*" class="hidden">
                         
                         <div id="uploadPlaceholder">
-                            <div class="w-12 h-12 mx-auto mb-3 bg-white/10 rounded-full flex items-center justify-center text-2xl product-float">📸</div>
+                            <div class="upload-product-icon-wrap mx-auto mb-3 flex items-center justify-center product-float">
+                                <img src="assets/upload-product-icon.png" alt="" class="upload-product-icon-img" width="32" height="32">
+                            </div>
                             <p class="text-sm font-semibold text-white mb-1" data-i18n="uploadProduct">ارفع صورة المنتج</p>
                             <p class="text-xs text-slate-400 mb-2" data-i18n="uploadHint">سنستخدمها لتوليد صور تسويقية احترافية</p>
                             <p class="text-xs text-slate-500" data-i18n="uploadFormats">PNG, JPG حتى 5MB</p>
@@ -672,7 +678,7 @@
         </aside>
 
         <!-- CENTER COLUMN: Preview -->
-        <section class="flex-1 glass rounded-2xl overflow-hidden flex flex-col relative">
+        <section id="previewSection" class="flex-1 glass rounded-2xl overflow-hidden flex flex-col relative">
             <div class="preview-toolbar h-14 border-b border-white/10 flex items-center justify-between px-6 shrink-0 bg-white/5">
             <div class="flex items-center gap-3 flex-wrap">
                 <div class="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 rounded-lg border border-green-500/30">
@@ -705,6 +711,43 @@
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                     <span data-i18n="openInNewTab">فتح في نافذة جديدة</span>
                 </button>
+                <button type="button" id="mobileFullscreenPreviewBtn" class="mobile-fullscreen-preview-btn" aria-label="Fullscreen preview" title="معاينة ملء الشاشة">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                    <span data-i18n="fullscreen">ملء الشاشة</span>
+                </button>
+                <!-- Mobile-only: edit / lang / theme controls (hidden on desktop) -->
+                <div class="mobile-toolbar-controls">
+                    <button type="button" class="mobile-toolbar-btn" onclick="document.body.classList.toggle('right-drawer-open')" aria-label="تعديل">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    </button>
+                    <div class="mobile-toolbar-lang relative">
+                        <button type="button" class="mobile-lang-trigger flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-white/5 border border-white/10 min-w-[2.5rem] justify-center" id="mobileLangTrigger" aria-haspopup="listbox" aria-expanded="false" aria-label="اللغة">
+                            <span class="lang-trigger-label">AR</span>
+                            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+                        <div id="mobileLangDropdown" class="lang-dropdown hidden absolute top-full mt-1 right-0 min-w-[6rem] py-1 rounded-xl bg-slate-800/95 border border-white/10 backdrop-blur-xl z-50 shadow-xl" role="listbox">
+                            <button type="button" class="lang-btn lang-dropdown-option w-full px-3 py-2 text-right text-xs rounded-lg transition-colors" data-lang="ar">العربية / AR</button>
+                            <button type="button" class="lang-btn lang-dropdown-option w-full px-3 py-2 text-right text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors" data-lang="en">English / EN</button>
+                            <button type="button" class="lang-btn lang-dropdown-option w-full px-3 py-2 text-right text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors" data-lang="fr">Français / FR</button>
+                        </div>
+                    </div>
+                    <!-- Desktop-style: pill (dark/light) + circular chevron (themes) -->
+                    <button type="button" class="mobile-theme-pill" onclick="document.getElementById('themeToggleBtn').click()" aria-label="Dark/Light mode" role="button">
+                        <span class="mobile-theme-pill-inner">
+                            <span class="mobile-theme-pill-knob">
+                                <svg class="theme-icon-moon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>
+                                <svg class="theme-icon-sun" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>
+                            </span>
+                            <span class="mobile-theme-pill-other">
+                                <svg class="theme-icon-sun" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>
+                                <svg class="theme-icon-moon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>
+                            </span>
+                        </span>
+                    </button>
+                    <button type="button" class="mobile-theme-chevron" onclick="document.getElementById('themeDropdownTrigger').click()" aria-label="Theme options">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                </div>
                 </div>
                 <div class="flex items-center gap-2 bg-white/5 rounded-xl p-1 border border-white/10 shadow-md hover:shadow-lg transition-shadow">
                     <button id="desktopViewBtn" class="view-btn active flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all">
@@ -763,7 +806,9 @@
                 <div class="preview-wrapper" id="previewWrapper">
                     
                     <div id="emptyState" class="empty-state">
-                        <div class="empty-state-icon product-float">🖥️ 📱</div>
+                        <div class="empty-state-icon product-float">
+                            <img src="assets/landing-page-icon.png" alt="" class="empty-state-icon-img" width="32" height="32">
+                        </div>
                         <p class="text-lg font-medium" data-i18n="landingHere">صفحة الهبوط ستظهر هنا</p>
                         <p class="text-sm text-slate-500 mt-2" data-i18n="uploadAndCreate">ارفع صورة المنتج واضغط إنشاء</p>
                     </div>
@@ -827,10 +872,26 @@
 
                 </div>
             </div>
+
+            <!-- Mobile-only action bar (hidden on desktop) -->
+            <div class="mobile-bottom-bar">
+                <button type="button" onclick="openCustomizationPanel()" class="mobile-bottom-btn">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+                    <span data-i18n="customize">تخصيص</span>
+                </button>
+                <button type="button" onclick="openExportModal()" class="mobile-bottom-btn">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    <span>Export</span>
+                </button>
+                <button type="button" onclick="regenerate()" class="mobile-bottom-btn">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    <span data-i18n="regenerate">إعادة إنشاء</span>
+                </button>
+            </div>
         </section>
 
-        <!-- LEFT COLUMN: Actions Panel -->
-        <aside class="w-72 glass rounded-2xl flex flex-col shrink-0 overflow-hidden">
+        <!-- Actions Panel (status, regenerate, images – hidden on mobile) -->
+        <aside id="actionsPanel" class="w-72 glass rounded-2xl flex flex-col shrink-0 overflow-hidden">
             <div class="p-6 space-y-6 overflow-y-auto flex-1">
                 
                 <div class="gradient-border p-4 rounded-2xl">

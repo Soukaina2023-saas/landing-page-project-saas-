@@ -7,22 +7,42 @@ vi.mock("../src/config/runtime.js", () => ({
   },
 }));
 
+vi.mock("../lib/db/client.js", () => ({
+  prisma: {
+    user: {
+      findUnique: vi.fn().mockResolvedValue({ plan: "BASIC" }),
+    },
+  },
+}));
+
 import { resolveUsageContext } from "../usage/usage.service.js";
 
 describe("resolveUsageContext", () => {
-  it("returns demo plan, mock-user, and YYYY-MM periodKey when isDemoMode is true", () => {
+  it("returns demo plan and demo-user when isDemoMode is true", async () => {
     mockDemoMode = true;
-    const ctx = resolveUsageContext({});
+    const ctx = await resolveUsageContext({});
     expect(ctx.plan).toBe("demo");
-    expect(ctx.userId).toBe("mock-user");
+    expect(ctx.userId).toBe("demo-user");
     expect(ctx.periodKey).toMatch(/^\d{4}-\d{2}$/);
   });
 
-  it("returns production plan (basic), not demo, when isDemoMode is false", () => {
+  it("returns demo plan when no auth context provided (unauthenticated)", async () => {
     mockDemoMode = false;
-    const ctx = resolveUsageContext({});
+    const ctx = await resolveUsageContext({});
+    expect(ctx.plan).toBe("demo");
+    expect(ctx.userId).toBe("demo-user");
+    expect(ctx.periodKey).toMatch(/^\d{4}-\d{2}$/);
+  });
+
+  it("returns real plan from DB when authenticated", async () => {
+    mockDemoMode = false;
+    const ctx = await resolveUsageContext({}, {
+      userId: "user-123",
+      isAuthenticated: true,
+      plan: "basic",
+    });
     expect(ctx.plan).toBe("basic");
-    expect(ctx.userId).toBe("mock-user");
+    expect(ctx.userId).toBe("user-123");
     expect(ctx.periodKey).toMatch(/^\d{4}-\d{2}$/);
   });
 });
