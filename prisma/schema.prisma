@@ -302,4 +302,4 @@ enum GenerationArtifactKind {
   single_file_html
 }
 
-// final-fix: 2026-04-01T22:50:00Z — stability confirmed.
+// final-fix: 2026-04-01T22:55:00Z — stability confirmed.

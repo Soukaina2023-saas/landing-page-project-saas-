@@ -22,7 +22,9 @@ function resolveDatasourceUrl(raw: string | undefined): string | undefined {
 }
 
 function createPrismaClient(): PrismaClient {
-  // Prisma 7: do not pass datasourceUrl (invalid). URL override is via env.
+  // Prisma 7: `datasourceUrl` on the constructor is invalid. The generated client
+  // reads `DATABASE_URL`; `datasources: { db: { url } }` is not in the public TS
+  // types for this generator, so we normalize the URL (connect_timeout) on env.
   const resolved = resolveDatasourceUrl(process.env.DATABASE_URL);
   if (resolved) {
     process.env.DATABASE_URL = resolved;
