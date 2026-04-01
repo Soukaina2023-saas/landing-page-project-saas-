@@ -1,5 +1,5 @@
 import { prisma } from "../db/client.js";
-import type { PrismaClient } from "../db/generated/prisma/client.js";
+import type { PrismaClient } from "@prisma/client";
 import type {
   CreditBalance,
   CreditReservation,

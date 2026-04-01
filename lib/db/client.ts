@@ -1,4 +1,4 @@
-import { PrismaClient } from './generated/prisma/index.js';
+import { PrismaClient } from "@prisma/client";
 
 /** Seconds — libpq `connect_timeout`; avoids hanging until the platform kills the invocation. */
 const SERVERLESS_CONNECT_TIMEOUT_SEC = 10;

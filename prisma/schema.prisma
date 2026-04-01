@@ -3,8 +3,7 @@ datasource db {
 }
 
 generator client {
-  provider      = "prisma-client"
-  output        = "../lib/db/generated/prisma"
+  provider      = "prisma-client-js"
   engineType    = "binary"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
@@ -303,4 +302,4 @@ enum GenerationArtifactKind {
   single_file_html
 }
 
-// cache-bust: 2026-04-01T22:00:00Z — autonomous prisma bundle (invalidate Vercel build cache)
+// cache-bust: 2026-04-01T22:45:00Z

@@ -59,6 +59,5 @@ desktop.ini
 *.temp
 .cache/
 
-# Prisma (migrations are tracked; generated client is produced by postinstall / build)
+# Prisma (migrations are tracked; client generated into node_modules/.prisma via postinstall)
 node_modules/.prisma
-lib/db/generated/prisma/

@@ -4,7 +4,7 @@
   "description": "AI-powered landing page generator with real Image Generation API integration",
   "type": "module",
   "scripts": {
-    "postinstall": "rm -rf lib/db/generated/prisma && prisma generate && node scripts/prisma-index.mjs",
+    "postinstall": "prisma generate",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "deploy:prod": "npm test && vercel --prod"
