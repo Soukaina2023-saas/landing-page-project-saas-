@@ -3,8 +3,9 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client"
-  output   = "../lib/db/generated/prisma"
+  provider      = "prisma-client"
+  output        = "../lib/db/generated/prisma"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 model User {

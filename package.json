@@ -43,5 +43,8 @@
     "gemini"
   ],
   "author": "PageGen Pro",
-  "license": "MIT"
+  "license": "MIT",
+  "prisma": {
+    "schema": "prisma/schema.prisma"
+  }
 }

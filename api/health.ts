@@ -1,4 +1,4 @@
-import { getPrisma } from '@/lib/db/client'
+import { getPrisma } from '../lib/db/client.js'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 /** Force Node.js runtime — Edge does not fully support Prisma. */
