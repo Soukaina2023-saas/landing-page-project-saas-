@@ -4,6 +4,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 /** Force Node.js runtime — Edge does not fully support Prisma. */
 export const runtime = 'nodejs'
 
+/** Dummy config to nudge a clean re-bundle on Vercel (Next-style shape; harmless for @vercel/node). */
+export const config = { api: { bodyParser: false } }
+
 function logHealthError(phase: string, err: unknown) {
   const payload: Record<string, unknown> = {
     phase,

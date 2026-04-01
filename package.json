@@ -4,7 +4,7 @@
   "description": "AI-powered landing page generator with real Image Generation API integration",
   "type": "module",
   "scripts": {
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && node scripts/prisma-index.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "deploy:prod": "npm test && vercel --prod"
@@ -46,6 +46,7 @@
   "license": "MIT",
   "prisma": {
     "schema": "prisma/schema.prisma",
-    "binaryTargets": ["native", "rhel-openssl-3.0.x"]
+    "binaryTargets": ["native", "rhel-openssl-3.0.x"],
+    "engineType": "library"
   }
 }
