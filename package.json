@@ -45,6 +45,7 @@
   "author": "PageGen Pro",
   "license": "MIT",
   "prisma": {
-    "schema": "prisma/schema.prisma"
+    "schema": "prisma/schema.prisma",
+    "binaryTargets": ["native", "rhel-openssl-3.0.x"]
   }
 }
