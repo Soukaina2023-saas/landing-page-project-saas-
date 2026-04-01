@@ -10,7 +10,6 @@
     "deploy:prod": "npm test && vercel --prod"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.4.2",
     "@prisma/client": "^7.4.2",
     "@supabase/supabase-js": "^2.99.0",
     "@types/jsonwebtoken": "^9.0.10",
