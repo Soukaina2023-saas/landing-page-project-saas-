@@ -1,16 +1,22 @@
+import { getPrisma } from '../lib/db/client'
+
 export const config = {
   runtime: 'nodejs',
-};
-
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createEndpoint } from "../lib/middleware/orchestrator.js";
-
-async function handler(req: VercelRequest, res: VercelResponse) {
-  res.status(200).json({
-    status: "ok",
-    runtime: "vercel-serverless",
-    timestamp: new Date().toISOString()
-  });
 }
 
-export default createEndpoint({ handler });
+export default async function handler(req, res) {
+  try {
+    const prisma = getPrisma()
+    await prisma.$connect()
+
+    return res.status(200).json({
+      status: 'ok',
+      db: 'connected'
+    })
+  } catch (error) {
+    return res.status(500).json({
+      error: error.message,
+      code: error.code
+    })
+  }
+}

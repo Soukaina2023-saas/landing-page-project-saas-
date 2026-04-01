@@ -1,19 +1,29 @@
 import { PrismaClient } from "./generated/prisma/client.js";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-const globalForPrisma = global as unknown as {
-  prisma: PrismaClient;
-};
+let prismaInstance: PrismaClient | null = null;
 
-function createPrismaClient(): PrismaClient {
-  const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL,
-  });
-  return new PrismaClient({ adapter, log: ["error"] });
+export function getPrisma() {
+  if (!prismaInstance) {
+    const adapter = new PrismaPg({
+      connectionString: process.env.DATABASE_URL,
+    });
+
+    prismaInstance = new PrismaClient({
+      adapter,
+      log: ["error"],
+    });
+  }
+
+  return prismaInstance;
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop, receiver) {
+    const client = getPrisma();
+    const value = Reflect.get(client, prop, receiver);
+    return typeof value === "function"
+      ? (value as (...args: unknown[]) => unknown).bind(client)
+      : value;
+  },
+});
