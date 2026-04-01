@@ -13,6 +13,7 @@ build/
 .env
 .env.local
 .env.*.local
+.env*.local
 .env.production
 .env.development
 
@@ -58,10 +59,7 @@ desktop.ini
 *.temp
 .cache/
 
-.vercel
-.env*.local
-
 # Prisma
-prisma/migrations/
+node_modules/.prisma
 
 /generated/prisma
