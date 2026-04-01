@@ -303,4 +303,4 @@ enum GenerationArtifactKind {
   single_file_html
 }
 
-// Force Rebuild Sync - April 2026
+// cache-bust: 2026-04-01T22:00:00Z — autonomous prisma bundle (invalidate Vercel build cache)

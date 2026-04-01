@@ -1,7 +1,10 @@
 {
   "functions": {
     "api/**/*.ts": {
-      "includeFiles": "lib/db/generated/prisma/**"
+      "includeFiles": [
+        "lib/db/generated/prisma/**",
+        "node_modules/.prisma/**"
+      ]
     }
   }
 }
