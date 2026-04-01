@@ -22,11 +22,14 @@ function resolveDatasourceUrl(raw: string | undefined): string | undefined {
 }
 
 function createPrismaClient(): PrismaClient {
-  const datasourceUrl = resolveDatasourceUrl(process.env.DATABASE_URL);
+  // Prisma 7: do not pass datasourceUrl (invalid). URL override is via env.
+  const resolved = resolveDatasourceUrl(process.env.DATABASE_URL);
+  if (resolved) {
+    process.env.DATABASE_URL = resolved;
+  }
   return new PrismaClient({
     log: ["error"],
-    datasourceUrl,
-  } as unknown as ConstructorParameters<typeof PrismaClient>[0]);
+  });
 }
 
 export function getPrisma() {
