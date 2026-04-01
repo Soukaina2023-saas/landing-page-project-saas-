@@ -47,6 +47,6 @@
   "prisma": {
     "schema": "prisma/schema.prisma",
     "binaryTargets": ["native", "rhel-openssl-3.0.x"],
-    "engineType": "library"
+    "engineType": "binary"
   }
 }
