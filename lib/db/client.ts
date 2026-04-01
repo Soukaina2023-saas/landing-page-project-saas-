@@ -3,9 +3,7 @@ import { PrismaClient } from "@prisma/client";
 let prismaInstance: PrismaClient | null = null;
 
 function createPrismaClient(): PrismaClient {
-  return new PrismaClient({
-    log: ["error"],
-  });
+  return new PrismaClient();
 }
 
 export function getPrisma() {

@@ -3,8 +3,8 @@ datasource db {
 }
 
 generator client {
-  provider      = "prisma-client-js"
-  engineType    = "binary"
+  provider = "prisma-client-js"
+  engineType = "binary"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
@@ -302,4 +302,4 @@ enum GenerationArtifactKind {
   single_file_html
 }
 
-// absolute-final-fix: 2026-04-01T23:15:00Z
+// absolute-final-fix: 2026-04-01T23:30:00Z
