@@ -304,3 +304,4 @@ enum GenerationArtifactKind {
 
 // absolute-final-fix: 2026-04-01T23:30:00Z
 // victory-fix: 2026-04-02T00:10:00Z — explicit constructor.
+// absolute-stable-fix: 2026-04-02T01:00:00Z

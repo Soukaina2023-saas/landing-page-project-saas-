@@ -5,14 +5,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createClient(): PrismaClient {
-  return new PrismaClient({
-    // @ts-expect-error — datasources.db.url is valid at runtime; PrismaClientOptions typings omit it for prisma-client-js v7.4
-    datasources: {
-      db: {
-        url: process.env.DATABASE_URL,
-      },
-    },
-  });
+  return new PrismaClient();
 }
 
 export const prisma = globalForPrisma.prisma ?? createClient();
