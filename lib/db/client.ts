@@ -2,16 +2,16 @@ import { PrismaClient } from "./generated/prisma/client.js";
 
 let prismaInstance: PrismaClient | null = null;
 
+function createPrismaClient(): PrismaClient {
+  return new PrismaClient({
+    log: ["error"],
+    datasourceUrl: process.env.DATABASE_URL,
+  } as unknown as ConstructorParameters<typeof PrismaClient>[0]);
+}
+
 export function getPrisma() {
   if (!prismaInstance) {
-    prismaInstance = new PrismaClient({
-      datasources: {
-        db: {
-          url: process.env.DATABASE_URL,
-        },
-      },
-      log: ["error"],
-    });
+    prismaInstance = createPrismaClient();
   }
 
   return prismaInstance;

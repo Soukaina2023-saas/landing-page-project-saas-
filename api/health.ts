@@ -1,10 +1,14 @@
 import { getPrisma } from '../lib/db/client'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 export const config = {
   runtime: 'nodejs',
 }
 
-export default async function handler(req, res) {
+export default async function handler(
+  req: VercelRequest,
+  res: VercelResponse
+) {
   try {
     const prisma = getPrisma()
     await prisma.$connect()
@@ -13,10 +17,10 @@ export default async function handler(req, res) {
       status: 'ok',
       db: 'connected'
     })
-  } catch (error) {
+  } catch (err: any) {
     return res.status(500).json({
-      error: error.message,
-      code: error.code
+      error: err.message || 'Internal Server Error',
+      code: err.code
     })
   }
 }
