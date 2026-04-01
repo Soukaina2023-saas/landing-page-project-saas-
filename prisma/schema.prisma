@@ -1,10 +1,10 @@
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
   provider = "prisma-client-js"
-  engineType = "binary"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
@@ -302,4 +302,4 @@ enum GenerationArtifactKind {
   single_file_html
 }
 
-// NUKE-CACHE: 2026-04-02T01:15:00Z
+// prisma-v5-downgrade: 2026-04-02T02:00:00Z
