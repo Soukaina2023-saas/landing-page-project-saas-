@@ -1,3 +1,7 @@
+export const config = {
+  runtime: 'nodejs',
+};
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { FEATURE_FLAGS } from "../src/config/featureFlags.js";
 import { generatePromptsSchema } from "../lib/validation/generatePrompts.schema.js";

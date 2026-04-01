@@ -4,6 +4,7 @@
   "description": "AI-powered landing page generator with real Image Generation API integration",
   "type": "module",
   "scripts": {
+    "postinstall": "prisma generate",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "deploy:prod": "npm test && vercel --prod"
@@ -31,7 +32,7 @@
     "vitest": "^4.0.18"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=24.0.0"
   },
   "keywords": [
     "landing-page",

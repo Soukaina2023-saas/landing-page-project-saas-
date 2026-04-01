@@ -1,3 +1,7 @@
+export const config = {
+  runtime: 'nodejs',
+};
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { packageResultSchema } from "../lib/validation/packageResult.schema.js";
 import { ApiError } from "../lib/utils/apiError.js";
