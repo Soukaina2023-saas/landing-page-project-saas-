@@ -302,3 +302,5 @@ enum GenerationArtifactKind {
   zip
   single_file_html
 }
+
+// Force Rebuild Sync - April 2026
