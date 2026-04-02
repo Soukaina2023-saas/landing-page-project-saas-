@@ -315,19 +315,18 @@ JSON ONLY, no markdown, no explanations.`
             idempotencyKey
         );
 
-        await prisma.generationRequest.update({
-            where: { id: generationRequest.id },
-            data: {
-                creditReservationId: reservationId,
-                status: "RUNNING",
-            },
-        });
-
         try {
-            // TEMP (Phase 6): set CREDIT_DEBUG_INJECT_AFTER_RESERVE=1 to verify rollback — never enable in production.
             if (process.env.CREDIT_DEBUG_INJECT_AFTER_RESERVE === "1") {
-                throw new Error("CREDIT_DEBUG_INJECT_AFTER_RESERVE");
+                throw new Error("Injected failure after reserveCredits");
             }
+
+            await prisma.generationRequest.update({
+                where: { id: generationRequest.id },
+                data: {
+                    creditReservationId: reservationId,
+                    status: "RUNNING",
+                },
+            });
 
             const result = await coreLogic();
 
