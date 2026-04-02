@@ -7,13 +7,6 @@ export const runtime = 'nodejs'
 
 export const config = { api: { bodyParser: false } }
 
-function isAuthorized(req: VercelRequest): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return false
-  const auth = req.headers?.authorization
-  return auth === `Bearer ${secret}`
-}
-
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
@@ -22,15 +15,23 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  if (!process.env.CRON_SECRET) {
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret) {
     logger.error('cron.cleanup-credits.misconfigured', {
       reason: 'CRON_SECRET is not set',
     })
-    return res.status(500).json({ error: 'Service misconfigured' })
+    return res.status(500).json({
+      error: 'CRON_SECRET not configured',
+    })
   }
 
-  if (!isAuthorized(req)) {
-    return res.status(401).json({ error: 'Unauthorized' })
+  const rawAuth = req.headers.authorization
+  const auth = Array.isArray(rawAuth) ? rawAuth[0] : rawAuth
+
+  if (auth !== `Bearer ${cronSecret}`) {
+    return res.status(401).json({
+      error: 'Unauthorized',
+    })
   }
 
   try {
