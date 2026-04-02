@@ -118,13 +118,16 @@ async function handler(req: OrchestratedRequest<GenerateBatchBody>, res: VercelR
 
     await checkBalance(userId, requiredCredits);
 
-    const { reservationId } = await reserveCredits(
-      userId,
-      requiredCredits,
-      idempotencyKey
-    );
+    let reservationId: string | undefined;
 
     try {
+      const { reservationId: rid } = await reserveCredits(
+        userId,
+        requiredCredits,
+        idempotencyKey
+      );
+      reservationId = rid;
+
       if (process.env.CREDIT_DEBUG_INJECT_AFTER_RESERVE === "1") {
         throw new Error("Injected failure after reserveCredits");
       }
@@ -172,15 +175,17 @@ async function handler(req: OrchestratedRequest<GenerateBatchBody>, res: VercelR
         })
         .catch(() => {});
 
-      await rollbackCredits(reservationId).catch((rollbackErr) => {
-        logger.error("credits.rollback.failed", {
-          reservationId,
-          err:
-            rollbackErr instanceof Error
-              ? rollbackErr.message
-              : String(rollbackErr),
+      if (reservationId) {
+        await rollbackCredits(reservationId).catch((rollbackErr) => {
+          logger.error("credits.rollback.failed", {
+            reservationId,
+            err:
+              rollbackErr instanceof Error
+                ? rollbackErr.message
+                : String(rollbackErr),
+          });
         });
-      });
+      }
       throw err;
     }
   } else {
