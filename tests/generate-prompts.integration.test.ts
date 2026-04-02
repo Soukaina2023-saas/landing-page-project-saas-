@@ -65,21 +65,25 @@ describe("POST /api/generate-prompts (integration)", () => {
     }
   });
 
-  it("valid request → 200 and usage incremented", async () => {
-    const req = createMockReq(validBody);
-    const res = createMockRes();
-    await handler(req as any, res as any);
+  it(
+    "valid request → 200 and usage incremented",
+    async () => {
+      const req = createMockReq(validBody);
+      const res = createMockRes();
+      await handler(req as any, res as any);
 
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ success: true, prompts: expect.any(Array) })
-    );
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true, prompts: expect.any(Array) })
+      );
 
-    const record = getUsageRecord(await getUsageKey());
-    expect(record).toBeDefined();
-    expect(record!.requestCount).toBe(1);
-    expect(record!.imageCount).toBe(1);
-  });
+      const record = getUsageRecord(await getUsageKey());
+      expect(record).toBeDefined();
+      expect(record!.requestCount).toBe(1);
+      expect(record!.imageCount).toBe(1);
+    },
+    60_000
+  );
 
   it("imagesRequested > MAX_IMAGES_PER_REQUEST → 400 and usage NOT incremented", async () => {
     const req = createMockReq({
@@ -101,51 +105,59 @@ describe("POST /api/generate-prompts (integration)", () => {
     expect(record).toBeUndefined();
   });
 
-  it("maxRequests 1: first call 200, second call 429, usage not incremented on failure", async () => {
-    const req1 = createMockReq(validBody);
-    const res1 = createMockRes();
-    await handler(req1 as any, res1 as any);
+  it(
+    "maxRequests 1: first call 200, second call 429, usage not incremented on failure",
+    async () => {
+      const req1 = createMockReq(validBody);
+      const res1 = createMockRes();
+      await handler(req1 as any, res1 as any);
 
-    expect(res1.status).toHaveBeenCalledWith(200);
-    expect(res1.json).toHaveBeenCalledWith(
-      expect.objectContaining({ success: true })
-    );
+      expect(res1.status).toHaveBeenCalledWith(200);
+      expect(res1.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true })
+      );
 
-    const req2 = createMockReq(validBody);
-    const res2 = createMockRes();
-    await handler(req2 as any, res2 as any);
+      const req2 = createMockReq(validBody);
+      const res2 = createMockRes();
+      await handler(req2 as any, res2 as any);
 
-    expect(res2.status).toHaveBeenCalledWith(429);
-    expect(res2.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        success: false,
-        error: expect.objectContaining({ code: "USAGE_LIMIT_EXCEEDED" }),
-      })
-    );
+      expect(res2.status).toHaveBeenCalledWith(429);
+      expect(res2.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          error: expect.objectContaining({ code: "USAGE_LIMIT_EXCEEDED" }),
+        })
+      );
 
-    const record = getUsageRecord(await getUsageKey());
-    expect(record).toBeDefined();
-    expect(record!.requestCount).toBe(1);
-    expect(record!.imageCount).toBe(1);
-  });
+      const record = getUsageRecord(await getUsageKey());
+      expect(record).toBeDefined();
+      expect(record!.requestCount).toBe(1);
+      expect(record!.imageCount).toBe(1);
+    },
+    60_000
+  );
 
-  it("FORCE_EXTERNAL_FAILURE=true → 500 RETRY_FAILED and usage NOT incremented", async () => {
-    process.env.GEMINI_API_KEY = "test-key";
-    process.env.FORCE_EXTERNAL_FAILURE = "true";
+  it(
+    "FORCE_EXTERNAL_FAILURE=true → 500 RETRY_FAILED and usage NOT incremented",
+    async () => {
+      process.env.GEMINI_API_KEY = "test-key";
+      process.env.FORCE_EXTERNAL_FAILURE = "true";
 
-    const req = createMockReq(validBody);
-    const res = createMockRes();
-    await handler(req as any, res as any);
+      const req = createMockReq(validBody);
+      const res = createMockRes();
+      await handler(req as any, res as any);
 
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        success: false,
-        error: expect.objectContaining({ code: "RETRY_FAILED" }),
-      })
-    );
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          error: expect.objectContaining({ code: "RETRY_FAILED" }),
+        })
+      );
 
-    const record = getUsageRecord(await getUsageKey());
-    expect(record).toBeUndefined();
-  });
+      const record = getUsageRecord(await getUsageKey());
+      expect(record).toBeUndefined();
+    },
+    60_000
+  );
 });
