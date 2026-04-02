@@ -133,6 +133,11 @@ async function handler(req: OrchestratedRequest<GenerateBatchBody>, res: VercelR
     });
 
     try {
+      // TEMP (Phase 6): set CREDIT_DEBUG_INJECT_AFTER_RESERVE=1 to verify rollback — never enable in production.
+      if (process.env.CREDIT_DEBUG_INJECT_AFTER_RESERVE === "1") {
+        throw new Error("CREDIT_DEBUG_INJECT_AFTER_RESERVE");
+      }
+
       const result = await coreLogic();
 
       await prisma.generationRequest.update({
@@ -168,7 +173,15 @@ async function handler(req: OrchestratedRequest<GenerateBatchBody>, res: VercelR
         })
         .catch(() => {});
 
-      await rollbackCredits(reservationId).catch(() => {});
+      await rollbackCredits(reservationId).catch((rollbackErr) => {
+        logger.error("credits.rollback.failed", {
+          reservationId,
+          err:
+            rollbackErr instanceof Error
+              ? rollbackErr.message
+              : String(rollbackErr),
+        });
+      });
       throw err;
     }
   } else {

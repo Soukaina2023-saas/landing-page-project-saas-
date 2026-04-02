@@ -29,42 +29,14 @@ function logHealthError(phase: string, err: unknown) {
   console.error('[api/health]', JSON.stringify(payload, null, 2))
 }
 
-function connectFailurePayload(err: unknown) {
-  if (err !== null && typeof err === 'object') {
-    const o = err as {
-      message?: unknown
-      code?: unknown
-      name?: unknown
-    }
-    return {
-      error:
-        typeof o.message === 'string'
-          ? o.message
-          : 'Database connection failed',
-      code: typeof o.code === 'string' ? o.code : undefined,
-      name: typeof o.name === 'string' ? o.name : undefined,
-    }
-  }
-  return {
-    error: 'Database connection failed',
-    code: undefined as string | undefined,
-    name: undefined as string | undefined,
-  }
-}
-
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
 ) {
   try {
     if (!process.env.DATABASE_URL) {
-      const body = {
-        error: 'DATABASE_URL is not configured',
-        code: 'ENV_MISSING' as const,
-        phase: 'config' as const,
-      }
-      console.error('[api/health]', JSON.stringify({ ...body, path: req.url }))
-      return res.status(500).json(body)
+      console.error('[api/health]', JSON.stringify({ phase: 'config', path: req.url }))
+      return res.status(500).json({ status: 'error' })
     }
 
     const prisma = getPrisma()
@@ -73,23 +45,14 @@ export default async function handler(
       await prisma.$connect()
     } catch (connectErr: unknown) {
       logHealthError('prisma_connect', connectErr)
-      const body = connectFailurePayload(connectErr)
-      return res.status(500).json({
-        ...body,
-        phase: 'prisma_connect',
-      })
+      return res.status(503).json({ status: 'error' })
     }
 
     return res.status(200).json({
       status: 'ok',
-      db: 'connected',
     })
   } catch (err: unknown) {
     logHealthError('unhandled', err)
-    const body = connectFailurePayload(err)
-    return res.status(500).json({
-      ...body,
-      phase: 'unhandled',
-    })
+    return res.status(500).json({ status: 'error' })
   }
 }

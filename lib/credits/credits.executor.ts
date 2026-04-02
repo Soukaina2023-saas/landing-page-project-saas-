@@ -6,6 +6,7 @@ import {
   reserveCredits,
   rollbackCredits,
 } from "./credits.service.js";
+import { logger } from "../utils/logger.js";
 
 interface ExecuteWithCreditsParams<T> {
   userId: string;
@@ -38,9 +39,14 @@ export async function executeWithCredits<T>({
   try {
     result = await handler();
   } catch (handlerError) {
-    await rollbackCredits(reservationId).catch(() => {
-      // Rollback is best-effort during error recovery.
-      // The reservation has an expiresAt TTL as a safety net.
+    await rollbackCredits(reservationId).catch((rollbackErr) => {
+      logger.error("credits.rollback.failed", {
+        reservationId,
+        err:
+          rollbackErr instanceof Error
+            ? rollbackErr.message
+            : String(rollbackErr),
+      });
     });
     throw handlerError;
   }

@@ -9,6 +9,8 @@ import type {
   CreditOperation,
   ReserveCreditsResult,
 } from "./credits.types.js";
+import { Prisma } from "@prisma/client";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import {
   createReservation,
   getBalance,
@@ -21,6 +23,11 @@ import {
 import { logger } from "../utils/logger.js";
 
 const RESERVATION_TTL_MS = 5 * 60 * 1000;
+
+/** Prevents read–modify–write races on balance + reservation rows under concurrent requests. */
+const SERIALIZABLE = {
+  isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+} as const;
 
 export function calculateCost(
   operation: CreditOperation,
@@ -58,53 +65,76 @@ export async function reserveCredits(
   cost: number,
   idempotencyKey: string
 ): Promise<ReserveCreditsResult> {
-  return prisma.$transaction(async (tx) => {
-    const reserveKey = `reserve:${idempotencyKey}`;
+  const reserveKey = `reserve:${idempotencyKey}`;
 
-    const existing = await tx.creditLedgerEntry.findUnique({
-      where: { idempotencyKey: reserveKey },
-      select: { reservationId: true },
-    });
+  try {
+    return await prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.creditLedgerEntry.findUnique({
+          where: { idempotencyKey: reserveKey },
+          select: { reservationId: true },
+        });
 
-    if (existing?.reservationId) {
-      logger.info("credits.reserve.idempotent_hit", {
-        userId,
-        reservationId: existing.reservationId,
-      });
-      return { reservationId: existing.reservationId };
-    }
+        if (existing?.reservationId) {
+          logger.info("credits.reserve.idempotent_hit", {
+            userId,
+            reservationId: existing.reservationId,
+          });
+          return { reservationId: existing.reservationId };
+        }
 
-    const balance = await getBalanceForUpdate(tx, userId);
-    const currentBalance = balance?.credits ?? 0;
+        const balance = await getBalanceForUpdate(tx, userId);
+        const currentBalance = balance?.credits ?? 0;
 
-    if (currentBalance < cost) {
-      throw new InsufficientCreditsError(currentBalance, cost);
-    }
+        if (currentBalance < cost) {
+          throw new InsufficientCreditsError(currentBalance, cost);
+        }
 
-    const expiresAt = new Date(Date.now() + RESERVATION_TTL_MS);
+        const expiresAt = new Date(Date.now() + RESERVATION_TTL_MS);
 
-    const [reservation] = await Promise.all([
-      createReservation(tx, userId, cost, expiresAt),
-      upsertBalance(tx, userId, -cost),
-    ]);
+        const [reservation] = await Promise.all([
+          createReservation(tx, userId, cost, expiresAt),
+          upsertBalance(tx, userId, -cost),
+        ]);
 
-    await tx.creditLedgerEntry.create({
-      data: {
-        userId,
-        direction: "DEBIT",
-        amount: cost,
-        reason: "reservation_hold",
-        reservationId: reservation.id,
-        idempotencyKey: reserveKey,
+        await tx.creditLedgerEntry.create({
+          data: {
+            userId,
+            direction: "DEBIT",
+            amount: cost,
+            reason: "reservation_hold",
+            reservationId: reservation.id,
+            idempotencyKey: reserveKey,
+          },
+        });
+
+        logger.info("credits.reserve.ok", {
+          userId,
+          reservationId: reservation.id,
+        });
+
+        return {
+          reservationId: reservation.id,
+        };
       },
-    });
-
-    logger.info("credits.reserve.ok", { userId, reservationId: reservation.id });
-
-    return {
-      reservationId: reservation.id,
-    };
-  });
+      SERIALIZABLE
+    );
+  } catch (e) {
+    if (e instanceof PrismaClientKnownRequestError && e.code === "P2002") {
+      const existing = await prisma.creditLedgerEntry.findUnique({
+        where: { idempotencyKey: reserveKey },
+        select: { reservationId: true },
+      });
+      if (existing?.reservationId) {
+        logger.info("credits.reserve.idempotent_race_resolved", {
+          userId,
+          reservationId: existing.reservationId,
+        });
+        return { reservationId: existing.reservationId };
+      }
+    }
+    throw e;
+  }
 }
 
 export async function finalizeCredits(
@@ -174,7 +204,7 @@ export async function finalizeCredits(
     });
 
     logger.info("credits.finalize.ok", { reservationId, generationRequestId });
-  });
+  }, SERIALIZABLE);
 }
 
 export async function rollbackCredits(reservationId: string): Promise<void> {
@@ -225,5 +255,5 @@ export async function rollbackCredits(reservationId: string): Promise<void> {
     });
 
     logger.info("credits.rollback.ok", { reservationId });
-  });
+  }, SERIALIZABLE);
 }
